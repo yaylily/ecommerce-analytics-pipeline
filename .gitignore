@@ -1,0 +1,53 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*.json
+service-account*.json
+.pgpass
+kaggle.json
+application_default_credentials.json
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Olist source and generated data
+/data/*
+!data/README.md
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.parquet
+*.feather
+*.zip
+
+# Database files and dumps
+*.dump
+*.backup
+*.sql.gz
+*.dump.sql
+postgres-data/
+postgres_data/
+pgdata/
+docker/volumes/
+/backups/
+/dumps/
+
+# dbt
+/target/
+/dbt_packages/
+/logs/
+
+# Notebooks and local tools
+.ipynb_checkpoints/
+.DS_Store
+.idea/
+.vscode/
