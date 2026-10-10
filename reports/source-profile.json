@@ -1,0 +1,517 @@
+{
+  "fanouts": {
+    "items_per_order": {
+      "child_rows_on_known_parents": 112650,
+      "max_children_per_parent": 21,
+      "parents_total": 99441,
+      "parents_with_multiple_children": 9803,
+      "parents_with_no_children": 775,
+      "parents_with_one_child": 88863
+    },
+    "payments_per_order": {
+      "child_rows_on_known_parents": 103886,
+      "max_children_per_parent": 29,
+      "parents_total": 99441,
+      "parents_with_multiple_children": 2961,
+      "parents_with_no_children": 1,
+      "parents_with_one_child": 96479
+    },
+    "reviews_per_order": {
+      "child_rows_on_known_parents": 99224,
+      "max_children_per_parent": 3,
+      "parents_total": 99441,
+      "parents_with_multiple_children": 547,
+      "parents_with_no_children": 768,
+      "parents_with_one_child": 98126
+    }
+  },
+  "join_amplifications": {
+    "order_items_x_payments_by_order": {
+      "anchor_null_key_rows": 0,
+      "keys_with_both_sides": 98665,
+      "left": {
+        "amounts": {
+          "freight_value": {
+            "baseline_on_common_keys": "2251901.05",
+            "increase_from_naive_join": "105527.46",
+            "invalid_amount_rows_total": 0,
+            "naive_join_to_baseline_ratio": "1.046861",
+            "naive_join_total": "2357428.51",
+            "null_amount_rows_total": 0,
+            "values_complete": true
+          },
+          "price": {
+            "baseline_on_common_keys": "13591508.73",
+            "increase_from_naive_join": "617606.61",
+            "invalid_amount_rows_total": 0,
+            "naive_join_to_baseline_ratio": "1.045441",
+            "naive_join_total": "14209115.34",
+            "null_amount_rows_total": 0,
+            "values_complete": true
+          }
+        },
+        "null_key_rows": 0,
+        "rows_before_on_common_keys": 112647
+      },
+      "naive_join": {
+        "row_increase_vs_left": 4954,
+        "row_increase_vs_right": 14545,
+        "rows_after": 117601,
+        "rows_after_to_left_ratio": "1.043978",
+        "rows_after_to_right_ratio": "1.141137"
+      },
+      "right": {
+        "amounts": {
+          "payment_value": {
+            "baseline_on_common_keys": "15846280.17",
+            "increase_from_naive_join": "4461854.54",
+            "invalid_amount_rows_total": 0,
+            "naive_join_to_baseline_ratio": "1.281571",
+            "naive_join_total": "20308134.71",
+            "null_amount_rows_total": 0,
+            "values_complete": true
+          }
+        },
+        "null_key_rows": 0,
+        "rows_before_on_common_keys": 103056
+      }
+    }
+  },
+  "profile_scope": [
+    "file_integrity",
+    "headers_and_missing_values",
+    "candidate_key_multiplicity",
+    "relationship_coverage_and_fanout",
+    "order_items_payments_join_amplification"
+  ],
+  "profile_version": 1,
+  "relationships": {
+    "customers_to_geolocation": {
+      "child_non_null_rows": 99441,
+      "child_null_key_rows": 0,
+      "direct_join_row_increase": 14984292,
+      "direct_join_rows": 15083455,
+      "direct_join_rows_per_matched_child": "152.107691",
+      "matched_child_rows": 99163,
+      "matched_parent_distinct_keys": 14837,
+      "matched_parent_keys_with_multiple_rows": 14714,
+      "matched_parent_max_rows_per_key": 1146,
+      "orphan_distinct_keys": 157,
+      "orphan_rows": 278,
+      "parent_distinct_keys": 19015,
+      "parent_null_key_rows": 0
+    },
+    "order_items_to_orders": {
+      "child_non_null_rows": 112650,
+      "child_null_key_rows": 0,
+      "direct_join_row_increase": 0,
+      "direct_join_rows": 112650,
+      "direct_join_rows_per_matched_child": "1.000000",
+      "matched_child_rows": 112650,
+      "matched_parent_distinct_keys": 98666,
+      "matched_parent_keys_with_multiple_rows": 0,
+      "matched_parent_max_rows_per_key": 1,
+      "orphan_distinct_keys": 0,
+      "orphan_rows": 0,
+      "parent_distinct_keys": 99441,
+      "parent_null_key_rows": 0
+    },
+    "order_items_to_products": {
+      "child_non_null_rows": 112650,
+      "child_null_key_rows": 0,
+      "direct_join_row_increase": 0,
+      "direct_join_rows": 112650,
+      "direct_join_rows_per_matched_child": "1.000000",
+      "matched_child_rows": 112650,
+      "matched_parent_distinct_keys": 32951,
+      "matched_parent_keys_with_multiple_rows": 0,
+      "matched_parent_max_rows_per_key": 1,
+      "orphan_distinct_keys": 0,
+      "orphan_rows": 0,
+      "parent_distinct_keys": 32951,
+      "parent_null_key_rows": 0
+    },
+    "order_items_to_sellers": {
+      "child_non_null_rows": 112650,
+      "child_null_key_rows": 0,
+      "direct_join_row_increase": 0,
+      "direct_join_rows": 112650,
+      "direct_join_rows_per_matched_child": "1.000000",
+      "matched_child_rows": 112650,
+      "matched_parent_distinct_keys": 3095,
+      "matched_parent_keys_with_multiple_rows": 0,
+      "matched_parent_max_rows_per_key": 1,
+      "orphan_distinct_keys": 0,
+      "orphan_rows": 0,
+      "parent_distinct_keys": 3095,
+      "parent_null_key_rows": 0
+    },
+    "orders_to_customers": {
+      "child_non_null_rows": 99441,
+      "child_null_key_rows": 0,
+      "direct_join_row_increase": 0,
+      "direct_join_rows": 99441,
+      "direct_join_rows_per_matched_child": "1.000000",
+      "matched_child_rows": 99441,
+      "matched_parent_distinct_keys": 99441,
+      "matched_parent_keys_with_multiple_rows": 0,
+      "matched_parent_max_rows_per_key": 1,
+      "orphan_distinct_keys": 0,
+      "orphan_rows": 0,
+      "parent_distinct_keys": 99441,
+      "parent_null_key_rows": 0
+    },
+    "payments_to_orders": {
+      "child_non_null_rows": 103886,
+      "child_null_key_rows": 0,
+      "direct_join_row_increase": 0,
+      "direct_join_rows": 103886,
+      "direct_join_rows_per_matched_child": "1.000000",
+      "matched_child_rows": 103886,
+      "matched_parent_distinct_keys": 99440,
+      "matched_parent_keys_with_multiple_rows": 0,
+      "matched_parent_max_rows_per_key": 1,
+      "orphan_distinct_keys": 0,
+      "orphan_rows": 0,
+      "parent_distinct_keys": 99441,
+      "parent_null_key_rows": 0
+    },
+    "products_to_category_translation": {
+      "child_non_null_rows": 32341,
+      "child_null_key_rows": 610,
+      "direct_join_row_increase": 0,
+      "direct_join_rows": 32328,
+      "direct_join_rows_per_matched_child": "1.000000",
+      "matched_child_rows": 32328,
+      "matched_parent_distinct_keys": 71,
+      "matched_parent_keys_with_multiple_rows": 0,
+      "matched_parent_max_rows_per_key": 1,
+      "orphan_distinct_keys": 2,
+      "orphan_rows": 13,
+      "parent_distinct_keys": 71,
+      "parent_null_key_rows": 0
+    },
+    "reviews_to_orders": {
+      "child_non_null_rows": 99224,
+      "child_null_key_rows": 0,
+      "direct_join_row_increase": 0,
+      "direct_join_rows": 99224,
+      "direct_join_rows_per_matched_child": "1.000000",
+      "matched_child_rows": 99224,
+      "matched_parent_distinct_keys": 98673,
+      "matched_parent_keys_with_multiple_rows": 0,
+      "matched_parent_max_rows_per_key": 1,
+      "orphan_distinct_keys": 0,
+      "orphan_rows": 0,
+      "parent_distinct_keys": 99441,
+      "parent_null_key_rows": 0
+    },
+    "sellers_to_geolocation": {
+      "child_non_null_rows": 3095,
+      "child_null_key_rows": 0,
+      "direct_join_row_increase": 431999,
+      "direct_join_rows": 435087,
+      "direct_join_rows_per_matched_child": "140.896049",
+      "matched_child_rows": 3088,
+      "matched_parent_distinct_keys": 2239,
+      "matched_parent_keys_with_multiple_rows": 2230,
+      "matched_parent_max_rows_per_key": 965,
+      "orphan_distinct_keys": 7,
+      "orphan_rows": 7,
+      "parent_distinct_keys": 19015,
+      "parent_null_key_rows": 0
+    }
+  },
+  "source_manifest_sha256": "041d600393762a8894f995816d71f805ac09672b8ce2ea7d134ce3a0669f71bb",
+  "tables": {
+    "category_translation": {
+      "candidate_keys": {
+        "product_category_name": {
+          "distinct_keys": 71,
+          "duplicate_rows": 0,
+          "keys_with_multiple_rows": 0,
+          "max_multiplicity": 1,
+          "null_rows": 0
+        }
+      },
+      "file": "product_category_name_translation.csv",
+      "group_profiles": {},
+      "null_counts": {
+        "product_category_name": 0,
+        "product_category_name_english": 0
+      },
+      "rows": 71,
+      "whitespace_only_counts": {
+        "product_category_name": 0,
+        "product_category_name_english": 0
+      }
+    },
+    "customers": {
+      "candidate_keys": {
+        "customer_id": {
+          "distinct_keys": 99441,
+          "duplicate_rows": 0,
+          "keys_with_multiple_rows": 0,
+          "max_multiplicity": 1,
+          "null_rows": 0
+        }
+      },
+      "file": "olist_customers_dataset.csv",
+      "group_profiles": {
+        "customer_unique_id": {
+          "distinct_keys": 96096,
+          "duplicate_rows": 3345,
+          "keys_with_multiple_rows": 2997,
+          "max_multiplicity": 17,
+          "null_rows": 0
+        }
+      },
+      "null_counts": {
+        "customer_city": 0,
+        "customer_id": 0,
+        "customer_state": 0,
+        "customer_unique_id": 0,
+        "customer_zip_code_prefix": 0
+      },
+      "rows": 99441,
+      "whitespace_only_counts": {
+        "customer_city": 0,
+        "customer_id": 0,
+        "customer_state": 0,
+        "customer_unique_id": 0,
+        "customer_zip_code_prefix": 0
+      }
+    },
+    "geolocation": {
+      "candidate_keys": {},
+      "file": "olist_geolocation_dataset.csv",
+      "group_profiles": {
+        "geolocation_zip_code_prefix": {
+          "distinct_keys": 19015,
+          "duplicate_rows": 981148,
+          "keys_with_multiple_rows": 17972,
+          "max_multiplicity": 1146,
+          "null_rows": 0
+        }
+      },
+      "null_counts": {
+        "geolocation_city": 0,
+        "geolocation_lat": 0,
+        "geolocation_lng": 0,
+        "geolocation_state": 0,
+        "geolocation_zip_code_prefix": 0
+      },
+      "rows": 1000163,
+      "whitespace_only_counts": {
+        "geolocation_city": 0,
+        "geolocation_lat": 0,
+        "geolocation_lng": 0,
+        "geolocation_state": 0,
+        "geolocation_zip_code_prefix": 0
+      }
+    },
+    "order_items": {
+      "candidate_keys": {
+        "order_id_order_item_id": {
+          "distinct_keys": 112650,
+          "duplicate_rows": 0,
+          "keys_with_multiple_rows": 0,
+          "max_multiplicity": 1,
+          "null_rows": 0
+        }
+      },
+      "file": "olist_order_items_dataset.csv",
+      "group_profiles": {},
+      "null_counts": {
+        "freight_value": 0,
+        "order_id": 0,
+        "order_item_id": 0,
+        "price": 0,
+        "product_id": 0,
+        "seller_id": 0,
+        "shipping_limit_date": 0
+      },
+      "rows": 112650,
+      "whitespace_only_counts": {
+        "freight_value": 0,
+        "order_id": 0,
+        "order_item_id": 0,
+        "price": 0,
+        "product_id": 0,
+        "seller_id": 0,
+        "shipping_limit_date": 0
+      }
+    },
+    "orders": {
+      "candidate_keys": {
+        "order_id": {
+          "distinct_keys": 99441,
+          "duplicate_rows": 0,
+          "keys_with_multiple_rows": 0,
+          "max_multiplicity": 1,
+          "null_rows": 0
+        }
+      },
+      "file": "olist_orders_dataset.csv",
+      "group_profiles": {},
+      "null_counts": {
+        "customer_id": 0,
+        "order_approved_at": 160,
+        "order_delivered_carrier_date": 1783,
+        "order_delivered_customer_date": 2965,
+        "order_estimated_delivery_date": 0,
+        "order_id": 0,
+        "order_purchase_timestamp": 0,
+        "order_status": 0
+      },
+      "rows": 99441,
+      "whitespace_only_counts": {
+        "customer_id": 0,
+        "order_approved_at": 0,
+        "order_delivered_carrier_date": 0,
+        "order_delivered_customer_date": 0,
+        "order_estimated_delivery_date": 0,
+        "order_id": 0,
+        "order_purchase_timestamp": 0,
+        "order_status": 0
+      }
+    },
+    "payments": {
+      "candidate_keys": {
+        "order_id_payment_sequential": {
+          "distinct_keys": 103886,
+          "duplicate_rows": 0,
+          "keys_with_multiple_rows": 0,
+          "max_multiplicity": 1,
+          "null_rows": 0
+        }
+      },
+      "file": "olist_order_payments_dataset.csv",
+      "group_profiles": {},
+      "null_counts": {
+        "order_id": 0,
+        "payment_installments": 0,
+        "payment_sequential": 0,
+        "payment_type": 0,
+        "payment_value": 0
+      },
+      "rows": 103886,
+      "whitespace_only_counts": {
+        "order_id": 0,
+        "payment_installments": 0,
+        "payment_sequential": 0,
+        "payment_type": 0,
+        "payment_value": 0
+      }
+    },
+    "products": {
+      "candidate_keys": {
+        "product_id": {
+          "distinct_keys": 32951,
+          "duplicate_rows": 0,
+          "keys_with_multiple_rows": 0,
+          "max_multiplicity": 1,
+          "null_rows": 0
+        }
+      },
+      "file": "olist_products_dataset.csv",
+      "group_profiles": {},
+      "null_counts": {
+        "product_category_name": 610,
+        "product_description_lenght": 610,
+        "product_height_cm": 2,
+        "product_id": 0,
+        "product_length_cm": 2,
+        "product_name_lenght": 610,
+        "product_photos_qty": 610,
+        "product_weight_g": 2,
+        "product_width_cm": 2
+      },
+      "rows": 32951,
+      "whitespace_only_counts": {
+        "product_category_name": 0,
+        "product_description_lenght": 0,
+        "product_height_cm": 0,
+        "product_id": 0,
+        "product_length_cm": 0,
+        "product_name_lenght": 0,
+        "product_photos_qty": 0,
+        "product_weight_g": 0,
+        "product_width_cm": 0
+      }
+    },
+    "reviews": {
+      "candidate_keys": {
+        "review_id_order_id": {
+          "distinct_keys": 99224,
+          "duplicate_rows": 0,
+          "keys_with_multiple_rows": 0,
+          "max_multiplicity": 1,
+          "null_rows": 0
+        }
+      },
+      "file": "olist_order_reviews_dataset.csv",
+      "group_profiles": {
+        "order_id": {
+          "distinct_keys": 98673,
+          "duplicate_rows": 551,
+          "keys_with_multiple_rows": 547,
+          "max_multiplicity": 3,
+          "null_rows": 0
+        },
+        "review_id": {
+          "distinct_keys": 98410,
+          "duplicate_rows": 814,
+          "keys_with_multiple_rows": 789,
+          "max_multiplicity": 3,
+          "null_rows": 0
+        }
+      },
+      "null_counts": {
+        "order_id": 0,
+        "review_answer_timestamp": 0,
+        "review_comment_message": 58247,
+        "review_comment_title": 87656,
+        "review_creation_date": 0,
+        "review_id": 0,
+        "review_score": 0
+      },
+      "rows": 99224,
+      "whitespace_only_counts": {
+        "order_id": 0,
+        "review_answer_timestamp": 0,
+        "review_comment_message": 27,
+        "review_comment_title": 2,
+        "review_creation_date": 0,
+        "review_id": 0,
+        "review_score": 0
+      }
+    },
+    "sellers": {
+      "candidate_keys": {
+        "seller_id": {
+          "distinct_keys": 3095,
+          "duplicate_rows": 0,
+          "keys_with_multiple_rows": 0,
+          "max_multiplicity": 1,
+          "null_rows": 0
+        }
+      },
+      "file": "olist_sellers_dataset.csv",
+      "group_profiles": {},
+      "null_counts": {
+        "seller_city": 0,
+        "seller_id": 0,
+        "seller_state": 0,
+        "seller_zip_code_prefix": 0
+      },
+      "rows": 3095,
+      "whitespace_only_counts": {
+        "seller_city": 0,
+        "seller_id": 0,
+        "seller_state": 0,
+        "seller_zip_code_prefix": 0
+      }
+    }
+  }
+}

@@ -21,6 +21,35 @@ olist_sellers_dataset.csv
 product_category_name_translation.csv
 ```
 
+## Local preparation
+
+1. 위 Kaggle 원본 페이지에서 데이터를 내려받아 압축을 푼다.
+2. 저장소의 `data/raw/` 아래에 위 9개 CSV를 둔다. 다른 CSV가 섞여 있거나
+   예상 파일이 빠지면 프로파일러는 실패한다.
+3. 저장소 루트에서 다음 명령을 실행한다.
+
+```bash
+python3 scripts/profile_source.py build \
+  --data-dir data/raw \
+  --contract config/olist-source-contract.json \
+  --output-dir reports
+
+python3 scripts/profile_source.py check \
+  --data-dir data/raw \
+  --contract config/olist-source-contract.json \
+  --output-dir reports
+
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+```
+
+`build`는 실제 CSV를 검사하고 집계 보고서를 만든다. `check`는 같은 입력에서
+다시 생성한 결과가 저장소의 보고서와 byte 단위로 같은지 확인한다. Python 표준
+라이브러리만 사용하므로 이 단계에는 별도 패키지 설치가 필요하지 않다.
+
+기본 경로가 아닌 곳에 원천 파일이 있다면 `--data-dir`만 바꿔 실행할 수 있다.
+보고서에는 파일 checksum, 행 수, NULL·중복·미연결 행과 조인 증폭 집계만 남고
+실제 ID, 위치값, 리뷰 문장과 로컬 절대경로는 남지 않는다.
+
 ## Optional extension
 
 [Marketing Funnel by Olist](https://www.kaggle.com/datasets/olistbr/marketing-funnel-olist)는

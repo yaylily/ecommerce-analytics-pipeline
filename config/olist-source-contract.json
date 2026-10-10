@@ -1,0 +1,256 @@
+{
+  "contract_version": 1,
+  "dataset": {
+    "name": "Brazilian E-Commerce Public Dataset by Olist",
+    "slug": "olistbr/brazilian-ecommerce",
+    "url": "https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce"
+  },
+  "files": [
+    {
+      "name": "olist_geolocation_dataset.csv",
+      "table": "geolocation",
+      "headers": [
+        "geolocation_zip_code_prefix",
+        "geolocation_lat",
+        "geolocation_lng",
+        "geolocation_city",
+        "geolocation_state"
+      ],
+      "candidate_keys": [],
+      "group_profiles": [
+        {
+          "name": "geolocation_zip_code_prefix",
+          "columns": ["geolocation_zip_code_prefix"]
+        }
+      ]
+    },
+    {
+      "name": "olist_customers_dataset.csv",
+      "table": "customers",
+      "headers": [
+        "customer_id",
+        "customer_unique_id",
+        "customer_zip_code_prefix",
+        "customer_city",
+        "customer_state"
+      ],
+      "candidate_keys": [
+        {"name": "customer_id", "columns": ["customer_id"]}
+      ],
+      "group_profiles": [
+        {"name": "customer_unique_id", "columns": ["customer_unique_id"]}
+      ]
+    },
+    {
+      "name": "product_category_name_translation.csv",
+      "table": "category_translation",
+      "headers": [
+        "product_category_name",
+        "product_category_name_english"
+      ],
+      "candidate_keys": [
+        {"name": "product_category_name", "columns": ["product_category_name"]}
+      ],
+      "group_profiles": []
+    },
+    {
+      "name": "olist_products_dataset.csv",
+      "table": "products",
+      "headers": [
+        "product_id",
+        "product_category_name",
+        "product_name_lenght",
+        "product_description_lenght",
+        "product_photos_qty",
+        "product_weight_g",
+        "product_length_cm",
+        "product_height_cm",
+        "product_width_cm"
+      ],
+      "candidate_keys": [
+        {"name": "product_id", "columns": ["product_id"]}
+      ],
+      "group_profiles": []
+    },
+    {
+      "name": "olist_sellers_dataset.csv",
+      "table": "sellers",
+      "headers": [
+        "seller_id",
+        "seller_zip_code_prefix",
+        "seller_city",
+        "seller_state"
+      ],
+      "candidate_keys": [
+        {"name": "seller_id", "columns": ["seller_id"]}
+      ],
+      "group_profiles": []
+    },
+    {
+      "name": "olist_orders_dataset.csv",
+      "table": "orders",
+      "headers": [
+        "order_id",
+        "customer_id",
+        "order_status",
+        "order_purchase_timestamp",
+        "order_approved_at",
+        "order_delivered_carrier_date",
+        "order_delivered_customer_date",
+        "order_estimated_delivery_date"
+      ],
+      "candidate_keys": [
+        {"name": "order_id", "columns": ["order_id"]}
+      ],
+      "group_profiles": []
+    },
+    {
+      "name": "olist_order_items_dataset.csv",
+      "table": "order_items",
+      "headers": [
+        "order_id",
+        "order_item_id",
+        "product_id",
+        "seller_id",
+        "shipping_limit_date",
+        "price",
+        "freight_value"
+      ],
+      "candidate_keys": [
+        {
+          "name": "order_id_order_item_id",
+          "columns": ["order_id", "order_item_id"]
+        }
+      ],
+      "group_profiles": []
+    },
+    {
+      "name": "olist_order_payments_dataset.csv",
+      "table": "payments",
+      "headers": [
+        "order_id",
+        "payment_sequential",
+        "payment_type",
+        "payment_installments",
+        "payment_value"
+      ],
+      "candidate_keys": [
+        {
+          "name": "order_id_payment_sequential",
+          "columns": ["order_id", "payment_sequential"]
+        }
+      ],
+      "group_profiles": []
+    },
+    {
+      "name": "olist_order_reviews_dataset.csv",
+      "table": "reviews",
+      "headers": [
+        "review_id",
+        "order_id",
+        "review_score",
+        "review_comment_title",
+        "review_comment_message",
+        "review_creation_date",
+        "review_answer_timestamp"
+      ],
+      "candidate_keys": [
+        {
+          "name": "review_id_order_id",
+          "columns": ["review_id", "order_id"]
+        }
+      ],
+      "group_profiles": [
+        {"name": "review_id", "columns": ["review_id"]},
+        {"name": "order_id", "columns": ["order_id"]}
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "customers_to_geolocation",
+      "child_file": "olist_customers_dataset.csv",
+      "child_columns": ["customer_zip_code_prefix"],
+      "parent_file": "olist_geolocation_dataset.csv",
+      "parent_columns": ["geolocation_zip_code_prefix"]
+    },
+    {
+      "name": "products_to_category_translation",
+      "child_file": "olist_products_dataset.csv",
+      "child_columns": ["product_category_name"],
+      "parent_file": "product_category_name_translation.csv",
+      "parent_columns": ["product_category_name"]
+    },
+    {
+      "name": "sellers_to_geolocation",
+      "child_file": "olist_sellers_dataset.csv",
+      "child_columns": ["seller_zip_code_prefix"],
+      "parent_file": "olist_geolocation_dataset.csv",
+      "parent_columns": ["geolocation_zip_code_prefix"]
+    },
+    {
+      "name": "orders_to_customers",
+      "child_file": "olist_orders_dataset.csv",
+      "child_columns": ["customer_id"],
+      "parent_file": "olist_customers_dataset.csv",
+      "parent_columns": ["customer_id"]
+    },
+    {
+      "name": "order_items_to_orders",
+      "child_file": "olist_order_items_dataset.csv",
+      "child_columns": ["order_id"],
+      "parent_file": "olist_orders_dataset.csv",
+      "parent_columns": ["order_id"]
+    },
+    {
+      "name": "order_items_to_products",
+      "child_file": "olist_order_items_dataset.csv",
+      "child_columns": ["product_id"],
+      "parent_file": "olist_products_dataset.csv",
+      "parent_columns": ["product_id"]
+    },
+    {
+      "name": "order_items_to_sellers",
+      "child_file": "olist_order_items_dataset.csv",
+      "child_columns": ["seller_id"],
+      "parent_file": "olist_sellers_dataset.csv",
+      "parent_columns": ["seller_id"]
+    },
+    {
+      "name": "payments_to_orders",
+      "child_file": "olist_order_payments_dataset.csv",
+      "child_columns": ["order_id"],
+      "parent_file": "olist_orders_dataset.csv",
+      "parent_columns": ["order_id"]
+    },
+    {
+      "name": "reviews_to_orders",
+      "child_file": "olist_order_reviews_dataset.csv",
+      "child_columns": ["order_id"],
+      "parent_file": "olist_orders_dataset.csv",
+      "parent_columns": ["order_id"]
+    }
+  ],
+  "fanouts": [
+    {"name": "items_per_order", "relationship": "order_items_to_orders"},
+    {"name": "payments_per_order", "relationship": "payments_to_orders"},
+    {"name": "reviews_per_order", "relationship": "reviews_to_orders"}
+  ],
+  "join_amplifications": [
+    {
+      "name": "order_items_x_payments_by_order",
+      "anchor_file": "olist_orders_dataset.csv",
+      "anchor_columns": ["order_id"],
+      "left": {
+        "file": "olist_order_items_dataset.csv",
+        "columns": ["order_id"],
+        "amount_columns": ["price", "freight_value"]
+      },
+      "right": {
+        "file": "olist_order_payments_dataset.csv",
+        "columns": ["order_id"],
+        "amount_columns": ["payment_value"]
+      }
+    }
+  ]
+}
