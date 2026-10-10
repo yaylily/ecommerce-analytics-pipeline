@@ -112,3 +112,22 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
   별도 metric contract로 승인한다. 배송과 리뷰의 관계를 인과로 표현하지 않는다.
 - Validation criterion: 두 질문이 각각 최종 mart와 재현 SQL로 답해지고 원천까지 대사되는지 확인한다.
 - Supersedes / Superseded by: 없음
+
+### D-006 — Use short-lived branches and pull requests
+
+- Status / Date: Accepted / 2026-10-10
+- Context: 개인 프로젝트에서도 AI-assisted 변경의 범위, 판단과 검증 흔적을
+  남기되 장기 브랜치 관리 부담은 피해야 한다.
+- Options considered:
+  1. 모든 변경을 `main`에 직접 커밋
+  2. `main`과 장기 `dev`를 운영하는 GitFlow
+  3. `main`과 짧은 작업 브랜치, PR을 사용하는 trunk-based workflow
+- Decision: 세 번째 방식을 사용한다. 초기 bootstrap 이후 모든 프로젝트 변경은
+  최신 `main`에서 만든 작업 브랜치에서 진행하고 PR 검토 후 병합한다.
+- Why: `main`을 검증된 상태로 유지하면서도 작업 단위별 계약·diff·검증 결과와
+  사용자 판단을 공개 가능한 이력으로 남길 수 있다.
+- Consequences and limitations: 작은 변경에도 브랜치와 PR이 필요하다. 대신 장기
+  `dev` 동기화와 다단계 병합은 관리하지 않는다.
+- Validation criterion: PR의 범위가 하나의 작업 단위인지, 최종 검증이 통과했는지,
+  진행 단계 변경 시 README가 함께 갱신됐는지 확인한다.
+- Supersedes / Superseded by: 없음
