@@ -252,5 +252,64 @@
         "amount_columns": ["payment_value"]
       }
     }
-  ]
+  ],
+  "value_profiles": {
+    "type_checks": [
+      {"file": "olist_orders_dataset.csv", "column": "order_purchase_timestamp", "target_type": "timestamp", "format": "%Y-%m-%d %H:%M:%S"},
+      {"file": "olist_orders_dataset.csv", "column": "order_approved_at", "target_type": "timestamp", "format": "%Y-%m-%d %H:%M:%S"},
+      {"file": "olist_orders_dataset.csv", "column": "order_delivered_carrier_date", "target_type": "timestamp", "format": "%Y-%m-%d %H:%M:%S"},
+      {"file": "olist_orders_dataset.csv", "column": "order_delivered_customer_date", "target_type": "timestamp", "format": "%Y-%m-%d %H:%M:%S"},
+      {"file": "olist_orders_dataset.csv", "column": "order_estimated_delivery_date", "target_type": "timestamp", "format": "%Y-%m-%d %H:%M:%S"},
+      {"file": "olist_order_items_dataset.csv", "column": "order_item_id", "target_type": "integer"},
+      {"file": "olist_order_items_dataset.csv", "column": "shipping_limit_date", "target_type": "timestamp", "format": "%Y-%m-%d %H:%M:%S"},
+      {"file": "olist_order_items_dataset.csv", "column": "price", "target_type": "decimal"},
+      {"file": "olist_order_items_dataset.csv", "column": "freight_value", "target_type": "decimal"},
+      {"file": "olist_order_payments_dataset.csv", "column": "payment_sequential", "target_type": "integer"},
+      {"file": "olist_order_payments_dataset.csv", "column": "payment_installments", "target_type": "integer"},
+      {"file": "olist_order_payments_dataset.csv", "column": "payment_value", "target_type": "decimal"},
+      {"file": "olist_order_reviews_dataset.csv", "column": "review_score", "target_type": "integer"},
+      {"file": "olist_order_reviews_dataset.csv", "column": "review_creation_date", "target_type": "timestamp", "format": "%Y-%m-%d %H:%M:%S"},
+      {"file": "olist_order_reviews_dataset.csv", "column": "review_answer_timestamp", "target_type": "timestamp", "format": "%Y-%m-%d %H:%M:%S"}
+    ],
+    "domain_counts": [
+      {
+        "name": "order_status",
+        "file": "olist_orders_dataset.csv",
+        "column": "order_status",
+        "published_values": ["approved", "canceled", "created", "delivered", "invoiced", "processing", "shipped", "unavailable"]
+      },
+      {
+        "name": "payment_type",
+        "file": "olist_order_payments_dataset.csv",
+        "column": "payment_type",
+        "published_values": ["boleto", "credit_card", "debit_card", "not_defined", "voucher"]
+      },
+      {
+        "name": "review_score",
+        "file": "olist_order_reviews_dataset.csv",
+        "column": "review_score",
+        "published_values": ["1", "2", "3", "4", "5"]
+      }
+    ],
+    "datetime_comparisons": [
+      {"name": "purchase_vs_approval", "file": "olist_orders_dataset.csv", "left_column": "order_purchase_timestamp", "right_column": "order_approved_at", "comparison_unit": "timestamp", "kind": "chronology"},
+      {"name": "purchase_vs_carrier", "file": "olist_orders_dataset.csv", "left_column": "order_purchase_timestamp", "right_column": "order_delivered_carrier_date", "comparison_unit": "timestamp", "kind": "chronology", "breakdown_column": "order_status"},
+      {"name": "approval_vs_carrier", "file": "olist_orders_dataset.csv", "left_column": "order_approved_at", "right_column": "order_delivered_carrier_date", "comparison_unit": "timestamp", "kind": "chronology", "breakdown_column": "order_status"},
+      {"name": "carrier_vs_customer", "file": "olist_orders_dataset.csv", "left_column": "order_delivered_carrier_date", "right_column": "order_delivered_customer_date", "comparison_unit": "timestamp", "kind": "chronology", "breakdown_column": "order_status"},
+      {"name": "purchase_vs_customer", "file": "olist_orders_dataset.csv", "left_column": "order_purchase_timestamp", "right_column": "order_delivered_customer_date", "comparison_unit": "timestamp", "kind": "chronology"},
+      {"name": "purchase_vs_estimated", "file": "olist_orders_dataset.csv", "left_column": "order_purchase_timestamp", "right_column": "order_estimated_delivery_date", "comparison_unit": "timestamp", "kind": "chronology"},
+      {"name": "review_creation_vs_answer", "file": "olist_order_reviews_dataset.csv", "left_column": "review_creation_date", "right_column": "review_answer_timestamp", "comparison_unit": "timestamp", "kind": "chronology"},
+      {"name": "delivered_vs_estimated_timestamp", "file": "olist_orders_dataset.csv", "left_column": "order_delivered_customer_date", "right_column": "order_estimated_delivery_date", "comparison_unit": "timestamp", "kind": "delivery_timing"},
+      {"name": "delivered_vs_estimated_date", "file": "olist_orders_dataset.csv", "left_column": "order_delivered_customer_date", "right_column": "order_estimated_delivery_date", "comparison_unit": "date", "kind": "delivery_timing", "breakdown_column": "order_status"}
+    ],
+    "amount_reconciliations": [
+      {
+        "name": "items_vs_payments_by_order",
+        "join_amplification": "order_items_x_payments_by_order",
+        "left_amount_columns": ["price", "freight_value"],
+        "right_amount_columns": ["payment_value"],
+        "anchor_breakdown_column": "order_status"
+      }
+    ]
+  }
 }

@@ -1,0 +1,937 @@
+{
+  "amount_reconciliations": {
+    "items_vs_payments_by_order": {
+      "absolute_difference_buckets": {
+        "absolute_difference_gt_0_01_lte_1": 54,
+        "absolute_difference_gt_10": 98,
+        "absolute_difference_gt_1_lte_10": 151,
+        "absolute_difference_lte_0_01": 273
+      },
+      "absolute_difference_total": "3271.95",
+      "anchor_breakdown": {
+        "column": "order_status",
+        "null": {
+          "anchor_keys": 0,
+          "eligible_keys": 0,
+          "exact_match_keys": 0,
+          "incomplete_common_keys": 0,
+          "keys_with_both_sides": 0,
+          "keys_with_left_only": 0,
+          "keys_with_neither_side": 0,
+          "keys_with_right_only": 0,
+          "left_greater_keys": 0,
+          "right_greater_keys": 0
+        },
+        "other": {
+          "anchor_keys": 0,
+          "eligible_keys": 0,
+          "exact_match_keys": 0,
+          "incomplete_common_keys": 0,
+          "keys_with_both_sides": 0,
+          "keys_with_left_only": 0,
+          "keys_with_neither_side": 0,
+          "keys_with_right_only": 0,
+          "left_greater_keys": 0,
+          "right_greater_keys": 0
+        },
+        "published_values": {
+          "approved": {
+            "anchor_keys": 2,
+            "eligible_keys": 2,
+            "exact_match_keys": 2,
+            "incomplete_common_keys": 0,
+            "keys_with_both_sides": 2,
+            "keys_with_left_only": 0,
+            "keys_with_neither_side": 0,
+            "keys_with_right_only": 0,
+            "left_greater_keys": 0,
+            "right_greater_keys": 0
+          },
+          "canceled": {
+            "anchor_keys": 625,
+            "eligible_keys": 461,
+            "exact_match_keys": 459,
+            "incomplete_common_keys": 0,
+            "keys_with_both_sides": 461,
+            "keys_with_left_only": 0,
+            "keys_with_neither_side": 0,
+            "keys_with_right_only": 164,
+            "left_greater_keys": 0,
+            "right_greater_keys": 2
+          },
+          "created": {
+            "anchor_keys": 5,
+            "eligible_keys": 0,
+            "exact_match_keys": 0,
+            "incomplete_common_keys": 0,
+            "keys_with_both_sides": 0,
+            "keys_with_left_only": 0,
+            "keys_with_neither_side": 0,
+            "keys_with_right_only": 5,
+            "left_greater_keys": 0,
+            "right_greater_keys": 0
+          },
+          "delivered": {
+            "anchor_keys": 96478,
+            "eligible_keys": 96477,
+            "exact_match_keys": 95908,
+            "incomplete_common_keys": 0,
+            "keys_with_both_sides": 96477,
+            "keys_with_left_only": 1,
+            "keys_with_neither_side": 0,
+            "keys_with_right_only": 0,
+            "left_greater_keys": 207,
+            "right_greater_keys": 362
+          },
+          "invoiced": {
+            "anchor_keys": 314,
+            "eligible_keys": 312,
+            "exact_match_keys": 311,
+            "incomplete_common_keys": 0,
+            "keys_with_both_sides": 312,
+            "keys_with_left_only": 0,
+            "keys_with_neither_side": 0,
+            "keys_with_right_only": 2,
+            "left_greater_keys": 0,
+            "right_greater_keys": 1
+          },
+          "processing": {
+            "anchor_keys": 301,
+            "eligible_keys": 301,
+            "exact_match_keys": 301,
+            "incomplete_common_keys": 0,
+            "keys_with_both_sides": 301,
+            "keys_with_left_only": 0,
+            "keys_with_neither_side": 0,
+            "keys_with_right_only": 0,
+            "left_greater_keys": 0,
+            "right_greater_keys": 0
+          },
+          "shipped": {
+            "anchor_keys": 1107,
+            "eligible_keys": 1106,
+            "exact_match_keys": 1102,
+            "incomplete_common_keys": 0,
+            "keys_with_both_sides": 1106,
+            "keys_with_left_only": 0,
+            "keys_with_neither_side": 0,
+            "keys_with_right_only": 1,
+            "left_greater_keys": 2,
+            "right_greater_keys": 2
+          },
+          "unavailable": {
+            "anchor_keys": 609,
+            "eligible_keys": 6,
+            "exact_match_keys": 6,
+            "incomplete_common_keys": 0,
+            "keys_with_both_sides": 6,
+            "keys_with_left_only": 0,
+            "keys_with_neither_side": 0,
+            "keys_with_right_only": 603,
+            "left_greater_keys": 0,
+            "right_greater_keys": 0
+          }
+        }
+      },
+      "anchor_keys": 99441,
+      "difference_bucket_scope": "nonzero absolute differences; descriptive only",
+      "eligible_keys": 98665,
+      "exact_match_keys": 98089,
+      "incomplete_common_keys": 0,
+      "join_amplification": "order_items_x_payments_by_order",
+      "keys_with_both_sides": 98665,
+      "keys_with_left_only": 1,
+      "keys_with_neither_side": 0,
+      "keys_with_right_only": 775,
+      "left_amount_columns": [
+        "price",
+        "freight_value"
+      ],
+      "left_greater_keys": 209,
+      "left_total_on_eligible_keys": "15843409.78",
+      "maximum_absolute_key_difference": "182.81",
+      "net_difference_right_minus_left": "2870.39",
+      "right_amount_columns": [
+        "payment_value"
+      ],
+      "right_greater_keys": 367,
+      "right_total_on_eligible_keys": "15846280.17",
+      "scope": "anchor keys with both sides and complete selected amount values"
+    }
+  },
+  "datetime_comparisons": {
+    "approval_vs_carrier": {
+      "breakdown": {
+        "column": "order_status",
+        "null": {
+          "comparable_rows": 0,
+          "equal_rows": 0,
+          "left_after_right_rows": 0,
+          "left_before_right_rows": 0,
+          "rows": 0,
+          "skipped_invalid_rows": 0,
+          "skipped_null_rows": 0
+        },
+        "other": {
+          "comparable_rows": 0,
+          "equal_rows": 0,
+          "left_after_right_rows": 0,
+          "left_before_right_rows": 0,
+          "rows": 0,
+          "skipped_invalid_rows": 0,
+          "skipped_null_rows": 0
+        },
+        "published_values": {
+          "approved": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 2,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 2
+          },
+          "canceled": {
+            "comparable_rows": 75,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 75,
+            "rows": 625,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 550
+          },
+          "created": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 5,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 5
+          },
+          "delivered": {
+            "comparable_rows": 96462,
+            "equal_rows": 0,
+            "left_after_right_rows": 1350,
+            "left_before_right_rows": 95112,
+            "rows": 96478,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 16
+          },
+          "invoiced": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 314,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 314
+          },
+          "processing": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 301,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 301
+          },
+          "shipped": {
+            "comparable_rows": 1107,
+            "equal_rows": 0,
+            "left_after_right_rows": 9,
+            "left_before_right_rows": 1098,
+            "rows": 1107,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 0
+          },
+          "unavailable": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 609,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 609
+          }
+        }
+      },
+      "comparable_rows": 97644,
+      "comparison_unit": "timestamp",
+      "equal_rows": 0,
+      "file": "olist_orders_dataset.csv",
+      "kind": "chronology",
+      "left_after_right_rows": 1359,
+      "left_before_right_rows": 96285,
+      "left_column": "order_approved_at",
+      "left_invalid_rows": 0,
+      "left_null_rows": 160,
+      "right_column": "order_delivered_carrier_date",
+      "right_invalid_rows": 0,
+      "right_null_rows": 1783,
+      "rows": 99441,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 1797
+    },
+    "carrier_vs_customer": {
+      "breakdown": {
+        "column": "order_status",
+        "null": {
+          "comparable_rows": 0,
+          "equal_rows": 0,
+          "left_after_right_rows": 0,
+          "left_before_right_rows": 0,
+          "rows": 0,
+          "skipped_invalid_rows": 0,
+          "skipped_null_rows": 0
+        },
+        "other": {
+          "comparable_rows": 0,
+          "equal_rows": 0,
+          "left_after_right_rows": 0,
+          "left_before_right_rows": 0,
+          "rows": 0,
+          "skipped_invalid_rows": 0,
+          "skipped_null_rows": 0
+        },
+        "published_values": {
+          "approved": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 2,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 2
+          },
+          "canceled": {
+            "comparable_rows": 6,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 6,
+            "rows": 625,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 619
+          },
+          "created": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 5,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 5
+          },
+          "delivered": {
+            "comparable_rows": 96469,
+            "equal_rows": 9,
+            "left_after_right_rows": 23,
+            "left_before_right_rows": 96437,
+            "rows": 96478,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 9
+          },
+          "invoiced": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 314,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 314
+          },
+          "processing": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 301,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 301
+          },
+          "shipped": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 1107,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 1107
+          },
+          "unavailable": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 609,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 609
+          }
+        }
+      },
+      "comparable_rows": 96475,
+      "comparison_unit": "timestamp",
+      "equal_rows": 9,
+      "file": "olist_orders_dataset.csv",
+      "kind": "chronology",
+      "left_after_right_rows": 23,
+      "left_before_right_rows": 96443,
+      "left_column": "order_delivered_carrier_date",
+      "left_invalid_rows": 0,
+      "left_null_rows": 1783,
+      "right_column": "order_delivered_customer_date",
+      "right_invalid_rows": 0,
+      "right_null_rows": 2965,
+      "rows": 99441,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 2966
+    },
+    "delivered_vs_estimated_date": {
+      "breakdown": {
+        "column": "order_status",
+        "null": {
+          "comparable_rows": 0,
+          "equal_rows": 0,
+          "left_after_right_rows": 0,
+          "left_before_right_rows": 0,
+          "rows": 0,
+          "skipped_invalid_rows": 0,
+          "skipped_null_rows": 0
+        },
+        "other": {
+          "comparable_rows": 0,
+          "equal_rows": 0,
+          "left_after_right_rows": 0,
+          "left_before_right_rows": 0,
+          "rows": 0,
+          "skipped_invalid_rows": 0,
+          "skipped_null_rows": 0
+        },
+        "published_values": {
+          "approved": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 2,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 2
+          },
+          "canceled": {
+            "comparable_rows": 6,
+            "equal_rows": 0,
+            "left_after_right_rows": 1,
+            "left_before_right_rows": 5,
+            "rows": 625,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 619
+          },
+          "created": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 5,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 5
+          },
+          "delivered": {
+            "comparable_rows": 96470,
+            "equal_rows": 1292,
+            "left_after_right_rows": 6534,
+            "left_before_right_rows": 88644,
+            "rows": 96478,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 8
+          },
+          "invoiced": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 314,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 314
+          },
+          "processing": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 301,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 301
+          },
+          "shipped": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 1107,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 1107
+          },
+          "unavailable": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 609,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 609
+          }
+        }
+      },
+      "comparable_rows": 96476,
+      "comparison_unit": "date",
+      "equal_rows": 1292,
+      "file": "olist_orders_dataset.csv",
+      "kind": "delivery_timing",
+      "left_after_right_rows": 6535,
+      "left_before_right_rows": 88649,
+      "left_column": "order_delivered_customer_date",
+      "left_invalid_rows": 0,
+      "left_null_rows": 2965,
+      "right_column": "order_estimated_delivery_date",
+      "right_invalid_rows": 0,
+      "right_null_rows": 0,
+      "rows": 99441,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 2965
+    },
+    "delivered_vs_estimated_timestamp": {
+      "comparable_rows": 96476,
+      "comparison_unit": "timestamp",
+      "equal_rows": 0,
+      "file": "olist_orders_dataset.csv",
+      "kind": "delivery_timing",
+      "left_after_right_rows": 7827,
+      "left_before_right_rows": 88649,
+      "left_column": "order_delivered_customer_date",
+      "left_invalid_rows": 0,
+      "left_null_rows": 2965,
+      "right_column": "order_estimated_delivery_date",
+      "right_invalid_rows": 0,
+      "right_null_rows": 0,
+      "rows": 99441,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 2965
+    },
+    "purchase_vs_approval": {
+      "comparable_rows": 99281,
+      "comparison_unit": "timestamp",
+      "equal_rows": 1296,
+      "file": "olist_orders_dataset.csv",
+      "kind": "chronology",
+      "left_after_right_rows": 0,
+      "left_before_right_rows": 97985,
+      "left_column": "order_purchase_timestamp",
+      "left_invalid_rows": 0,
+      "left_null_rows": 0,
+      "right_column": "order_approved_at",
+      "right_invalid_rows": 0,
+      "right_null_rows": 160,
+      "rows": 99441,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 160
+    },
+    "purchase_vs_carrier": {
+      "breakdown": {
+        "column": "order_status",
+        "null": {
+          "comparable_rows": 0,
+          "equal_rows": 0,
+          "left_after_right_rows": 0,
+          "left_before_right_rows": 0,
+          "rows": 0,
+          "skipped_invalid_rows": 0,
+          "skipped_null_rows": 0
+        },
+        "other": {
+          "comparable_rows": 0,
+          "equal_rows": 0,
+          "left_after_right_rows": 0,
+          "left_before_right_rows": 0,
+          "rows": 0,
+          "skipped_invalid_rows": 0,
+          "skipped_null_rows": 0
+        },
+        "published_values": {
+          "approved": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 2,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 2
+          },
+          "canceled": {
+            "comparable_rows": 75,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 75,
+            "rows": 625,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 550
+          },
+          "created": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 5,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 5
+          },
+          "delivered": {
+            "comparable_rows": 96476,
+            "equal_rows": 0,
+            "left_after_right_rows": 165,
+            "left_before_right_rows": 96311,
+            "rows": 96478,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 2
+          },
+          "invoiced": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 314,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 314
+          },
+          "processing": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 301,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 301
+          },
+          "shipped": {
+            "comparable_rows": 1107,
+            "equal_rows": 0,
+            "left_after_right_rows": 1,
+            "left_before_right_rows": 1106,
+            "rows": 1107,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 0
+          },
+          "unavailable": {
+            "comparable_rows": 0,
+            "equal_rows": 0,
+            "left_after_right_rows": 0,
+            "left_before_right_rows": 0,
+            "rows": 609,
+            "skipped_invalid_rows": 0,
+            "skipped_null_rows": 609
+          }
+        }
+      },
+      "comparable_rows": 97658,
+      "comparison_unit": "timestamp",
+      "equal_rows": 0,
+      "file": "olist_orders_dataset.csv",
+      "kind": "chronology",
+      "left_after_right_rows": 166,
+      "left_before_right_rows": 97492,
+      "left_column": "order_purchase_timestamp",
+      "left_invalid_rows": 0,
+      "left_null_rows": 0,
+      "right_column": "order_delivered_carrier_date",
+      "right_invalid_rows": 0,
+      "right_null_rows": 1783,
+      "rows": 99441,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 1783
+    },
+    "purchase_vs_customer": {
+      "comparable_rows": 96476,
+      "comparison_unit": "timestamp",
+      "equal_rows": 0,
+      "file": "olist_orders_dataset.csv",
+      "kind": "chronology",
+      "left_after_right_rows": 0,
+      "left_before_right_rows": 96476,
+      "left_column": "order_purchase_timestamp",
+      "left_invalid_rows": 0,
+      "left_null_rows": 0,
+      "right_column": "order_delivered_customer_date",
+      "right_invalid_rows": 0,
+      "right_null_rows": 2965,
+      "rows": 99441,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 2965
+    },
+    "purchase_vs_estimated": {
+      "comparable_rows": 99441,
+      "comparison_unit": "timestamp",
+      "equal_rows": 0,
+      "file": "olist_orders_dataset.csv",
+      "kind": "chronology",
+      "left_after_right_rows": 0,
+      "left_before_right_rows": 99441,
+      "left_column": "order_purchase_timestamp",
+      "left_invalid_rows": 0,
+      "left_null_rows": 0,
+      "right_column": "order_estimated_delivery_date",
+      "right_invalid_rows": 0,
+      "right_null_rows": 0,
+      "rows": 99441,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 0
+    },
+    "review_creation_vs_answer": {
+      "comparable_rows": 99224,
+      "comparison_unit": "timestamp",
+      "equal_rows": 0,
+      "file": "olist_order_reviews_dataset.csv",
+      "kind": "chronology",
+      "left_after_right_rows": 0,
+      "left_before_right_rows": 99224,
+      "left_column": "review_creation_date",
+      "left_invalid_rows": 0,
+      "left_null_rows": 0,
+      "right_column": "review_answer_timestamp",
+      "right_invalid_rows": 0,
+      "right_null_rows": 0,
+      "rows": 99224,
+      "skipped_invalid_rows": 0,
+      "skipped_null_rows": 0
+    }
+  },
+  "profile_scope": [
+    "type_convertibility",
+    "published_domain_distribution",
+    "datetime_comparisons",
+    "anchor_grain_amount_reconciliation"
+  ],
+  "source_manifest_sha256": "041d600393762a8894f995816d71f805ac09672b8ce2ea7d134ce3a0669f71bb",
+  "tables": {
+    "order_items": {
+      "domain_counts": {},
+      "file": "olist_order_items_dataset.csv",
+      "type_checks": {
+        "freight_value": {
+          "invalid_rows": 0,
+          "maximum": "409.68",
+          "minimum": "0.00",
+          "negative_rows": 0,
+          "null_rows": 0,
+          "parseable_rows": 112650,
+          "rows": 112650,
+          "target_type": "decimal",
+          "zero_rows": 383
+        },
+        "order_item_id": {
+          "invalid_rows": 0,
+          "maximum": 21,
+          "minimum": 1,
+          "negative_rows": 0,
+          "null_rows": 0,
+          "parseable_rows": 112650,
+          "rows": 112650,
+          "target_type": "integer",
+          "zero_rows": 0
+        },
+        "price": {
+          "invalid_rows": 0,
+          "maximum": "6735.00",
+          "minimum": "0.85",
+          "negative_rows": 0,
+          "null_rows": 0,
+          "parseable_rows": 112650,
+          "rows": 112650,
+          "target_type": "decimal",
+          "zero_rows": 0
+        },
+        "shipping_limit_date": {
+          "invalid_rows": 0,
+          "maximum": "2020-04-09 22:35:08",
+          "minimum": "2016-09-19 00:15:34",
+          "null_rows": 0,
+          "parseable_rows": 112650,
+          "rows": 112650,
+          "target_type": "timestamp"
+        }
+      }
+    },
+    "orders": {
+      "domain_counts": {
+        "order_status": {
+          "column": "order_status",
+          "null_rows": 0,
+          "other_distinct_values": 0,
+          "other_rows": 0,
+          "published_value_counts": {
+            "approved": 2,
+            "canceled": 625,
+            "created": 5,
+            "delivered": 96478,
+            "invoiced": 314,
+            "processing": 301,
+            "shipped": 1107,
+            "unavailable": 609
+          },
+          "rows": 99441
+        }
+      },
+      "file": "olist_orders_dataset.csv",
+      "type_checks": {
+        "order_approved_at": {
+          "invalid_rows": 0,
+          "maximum": "2018-09-03 17:40:06",
+          "minimum": "2016-09-15 12:16:38",
+          "null_rows": 160,
+          "parseable_rows": 99281,
+          "rows": 99441,
+          "target_type": "timestamp"
+        },
+        "order_delivered_carrier_date": {
+          "invalid_rows": 0,
+          "maximum": "2018-09-11 19:48:28",
+          "minimum": "2016-10-08 10:34:01",
+          "null_rows": 1783,
+          "parseable_rows": 97658,
+          "rows": 99441,
+          "target_type": "timestamp"
+        },
+        "order_delivered_customer_date": {
+          "invalid_rows": 0,
+          "maximum": "2018-10-17 13:22:46",
+          "minimum": "2016-10-11 13:46:32",
+          "null_rows": 2965,
+          "parseable_rows": 96476,
+          "rows": 99441,
+          "target_type": "timestamp"
+        },
+        "order_estimated_delivery_date": {
+          "invalid_rows": 0,
+          "maximum": "2018-11-12 00:00:00",
+          "minimum": "2016-09-30 00:00:00",
+          "null_rows": 0,
+          "parseable_rows": 99441,
+          "rows": 99441,
+          "target_type": "timestamp"
+        },
+        "order_purchase_timestamp": {
+          "invalid_rows": 0,
+          "maximum": "2018-10-17 17:30:18",
+          "minimum": "2016-09-04 21:15:19",
+          "null_rows": 0,
+          "parseable_rows": 99441,
+          "rows": 99441,
+          "target_type": "timestamp"
+        }
+      }
+    },
+    "payments": {
+      "domain_counts": {
+        "payment_type": {
+          "column": "payment_type",
+          "null_rows": 0,
+          "other_distinct_values": 0,
+          "other_rows": 0,
+          "published_value_counts": {
+            "boleto": 19784,
+            "credit_card": 76795,
+            "debit_card": 1529,
+            "not_defined": 3,
+            "voucher": 5775
+          },
+          "rows": 103886
+        }
+      },
+      "file": "olist_order_payments_dataset.csv",
+      "type_checks": {
+        "payment_installments": {
+          "invalid_rows": 0,
+          "maximum": 24,
+          "minimum": 0,
+          "negative_rows": 0,
+          "null_rows": 0,
+          "parseable_rows": 103886,
+          "rows": 103886,
+          "target_type": "integer",
+          "zero_rows": 2
+        },
+        "payment_sequential": {
+          "invalid_rows": 0,
+          "maximum": 29,
+          "minimum": 1,
+          "negative_rows": 0,
+          "null_rows": 0,
+          "parseable_rows": 103886,
+          "rows": 103886,
+          "target_type": "integer",
+          "zero_rows": 0
+        },
+        "payment_value": {
+          "invalid_rows": 0,
+          "maximum": "13664.08",
+          "minimum": "0.00",
+          "negative_rows": 0,
+          "null_rows": 0,
+          "parseable_rows": 103886,
+          "rows": 103886,
+          "target_type": "decimal",
+          "zero_rows": 9
+        }
+      }
+    },
+    "reviews": {
+      "domain_counts": {
+        "review_score": {
+          "column": "review_score",
+          "null_rows": 0,
+          "other_distinct_values": 0,
+          "other_rows": 0,
+          "published_value_counts": {
+            "1": 11424,
+            "2": 3151,
+            "3": 8179,
+            "4": 19142,
+            "5": 57328
+          },
+          "rows": 99224
+        }
+      },
+      "file": "olist_order_reviews_dataset.csv",
+      "type_checks": {
+        "review_answer_timestamp": {
+          "invalid_rows": 0,
+          "maximum": "2018-10-29 12:27:35",
+          "minimum": "2016-10-07 18:32:28",
+          "null_rows": 0,
+          "parseable_rows": 99224,
+          "rows": 99224,
+          "target_type": "timestamp"
+        },
+        "review_creation_date": {
+          "invalid_rows": 0,
+          "maximum": "2018-08-31 00:00:00",
+          "minimum": "2016-10-02 00:00:00",
+          "null_rows": 0,
+          "parseable_rows": 99224,
+          "rows": 99224,
+          "target_type": "timestamp"
+        },
+        "review_score": {
+          "invalid_rows": 0,
+          "maximum": 5,
+          "minimum": 1,
+          "negative_rows": 0,
+          "null_rows": 0,
+          "parseable_rows": 99224,
+          "rows": 99224,
+          "target_type": "integer",
+          "zero_rows": 0
+        }
+      }
+    }
+  },
+  "value_profile_version": 1
+}
