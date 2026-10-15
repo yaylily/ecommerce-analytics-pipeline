@@ -13,6 +13,7 @@ import sys
 import tempfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable
@@ -22,9 +23,14 @@ REPORT_FILENAMES = (
     "source-manifest.json",
     "source-profile.json",
     "source-profile.md",
+    "source-value-profile.json",
+    "source-value-profile.md",
 )
 CSV_FIELD_SIZE_LIMIT = 10 * 1024 * 1024
 SAFE_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+STRICT_INTEGER = re.compile(r"^[+-]?[0-9]+$")
+BREAKDOWN_OTHER = "__other__"
+BREAKDOWN_NULL = "__null__"
 
 Key = str | tuple[str, ...]
 
@@ -79,10 +85,14 @@ class AmountSide:
     sums: dict[str, defaultdict[Key, Decimal]] = field(default_factory=dict)
     null_amount_rows: Counter[str] = field(default_factory=Counter)
     invalid_amount_rows: Counter[str] = field(default_factory=Counter)
+    incomplete_keys: dict[str, set[Key]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.sums = {
             column: defaultdict(Decimal) for column in self.spec["amount_columns"]
+        }
+        self.incomplete_keys = {
+            column: set() for column in self.spec["amount_columns"]
         }
 
     def add(self, row: dict[str | None, str | None]) -> None:
@@ -94,14 +104,24 @@ class AmountSide:
             value = row[column]
             if value == "":
                 self.null_amount_rows[column] += 1
+                if key is not None:
+                    self.incomplete_keys[column].add(key)
                 continue
+            if value is not None and value != value.strip() and key is not None:
+                # Preserve the existing structural-profile parsing semantics while
+                # excluding whitespace-padded values from the new reconciliation.
+                self.incomplete_keys[column].add(key)
             try:
                 amount = Decimal(value)  # type: ignore[arg-type]
             except (InvalidOperation, ValueError):
                 self.invalid_amount_rows[column] += 1
+                if key is not None:
+                    self.incomplete_keys[column].add(key)
                 continue
             if not amount.is_finite():
                 self.invalid_amount_rows[column] += 1
+                if key is not None:
+                    self.incomplete_keys[column].add(key)
                 continue
             if key is not None:
                 self.sums[column][key] += amount
@@ -117,6 +137,258 @@ class JoinRuntime:
     def __post_init__(self) -> None:
         self.left = AmountSide(self.spec["left"])
         self.right = AmountSide(self.spec["right"])
+
+
+ParsedValue = int | Decimal | datetime
+ParseResult = tuple[str, ParsedValue | None]
+
+
+def _breakdown_group(value: str, published_values: list[str]) -> str:
+    if value == "":
+        return BREAKDOWN_NULL
+    if value in published_values:
+        return value
+    return BREAKDOWN_OTHER
+
+
+def _parse_value(value: str, spec: dict[str, Any]) -> ParseResult:
+    if value == "":
+        return "null", None
+    if value != value.strip():
+        return "invalid", None
+    try:
+        target_type = spec["target_type"]
+        if target_type == "integer":
+            if STRICT_INTEGER.fullmatch(value) is None:
+                return "invalid", None
+            return "parseable", int(value)
+        if target_type == "decimal":
+            parsed_decimal = Decimal(value)
+            if not parsed_decimal.is_finite():
+                return "invalid", None
+            return "parseable", parsed_decimal
+        return "parseable", datetime.strptime(value, spec["format"])
+    except (InvalidOperation, ValueError, OverflowError):
+        return "invalid", None
+
+
+@dataclass
+class TypeCheckRuntime:
+    spec: dict[str, Any]
+    null_rows: int = 0
+    parseable_rows: int = 0
+    invalid_rows: int = 0
+    zero_rows: int = 0
+    negative_rows: int = 0
+    minimum: ParsedValue | None = None
+    maximum: ParsedValue | None = None
+
+    def add(self, value: str) -> ParseResult:
+        status, parsed = _parse_value(value, self.spec)
+        if status == "null":
+            self.null_rows += 1
+        elif status == "invalid":
+            self.invalid_rows += 1
+        else:
+            self.parseable_rows += 1
+            if parsed is not None:
+                if self.minimum is None or parsed < self.minimum:
+                    self.minimum = parsed
+                if self.maximum is None or parsed > self.maximum:
+                    self.maximum = parsed
+                if isinstance(parsed, (int, Decimal)):
+                    if parsed == 0:
+                        self.zero_rows += 1
+                    elif parsed < 0:
+                        self.negative_rows += 1
+        return status, parsed
+
+    def _value_text(self, value: ParsedValue | None) -> int | str | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.strftime(self.spec["format"])
+        if isinstance(value, Decimal):
+            return _decimal_text(value)
+        return value
+
+    def summary(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "invalid_rows": self.invalid_rows,
+            "maximum": self._value_text(self.maximum),
+            "minimum": self._value_text(self.minimum),
+            "null_rows": self.null_rows,
+            "parseable_rows": self.parseable_rows,
+            "rows": self.null_rows + self.parseable_rows + self.invalid_rows,
+            "target_type": self.spec["target_type"],
+        }
+        if self.spec["target_type"] in {"integer", "decimal"}:
+            result["negative_rows"] = self.negative_rows
+            result["zero_rows"] = self.zero_rows
+        return result
+
+
+@dataclass
+class DomainCountRuntime:
+    spec: dict[str, Any]
+    published_counts: Counter[str] = field(default_factory=Counter)
+    other_values: set[str] = field(default_factory=set)
+    null_rows: int = 0
+    other_rows: int = 0
+
+    def add(self, value: str) -> None:
+        if value == "":
+            self.null_rows += 1
+        elif value in self.spec["published_values"]:
+            self.published_counts[value] += 1
+        else:
+            self.other_rows += 1
+            self.other_values.add(value)
+
+    def summary(self) -> dict[str, Any]:
+        published = {
+            value: self.published_counts[value]
+            for value in self.spec["published_values"]
+        }
+        return {
+            "column": self.spec["column"],
+            "null_rows": self.null_rows,
+            "other_distinct_values": len(self.other_values),
+            "other_rows": self.other_rows,
+            "published_value_counts": published,
+            "rows": self.null_rows + self.other_rows + sum(published.values()),
+        }
+
+
+@dataclass
+class DatetimeComparisonRuntime:
+    spec: dict[str, Any]
+    left_null_rows: int = 0
+    right_null_rows: int = 0
+    left_invalid_rows: int = 0
+    right_invalid_rows: int = 0
+    left_before_right_rows: int = 0
+    equal_rows: int = 0
+    left_after_right_rows: int = 0
+    skipped_null_rows: int = 0
+    skipped_invalid_rows: int = 0
+    rows: int = 0
+    breakdown_counts: dict[str, Counter[str]] = field(
+        default_factory=lambda: defaultdict(Counter)
+    )
+
+    def add(
+        self,
+        left: ParseResult,
+        right: ParseResult,
+        breakdown_value: str | None = None,
+    ) -> None:
+        self.rows += 1
+        left_status, left_value = left
+        right_status, right_value = right
+        breakdown: Counter[str] | None = None
+        if "breakdown_column" in self.spec:
+            if breakdown_value is None:
+                raise AssertionError("datetime breakdown value is missing")
+            group = _breakdown_group(
+                breakdown_value, self.spec["_breakdown_published_values"]
+            )
+            breakdown = self.breakdown_counts[group]
+            breakdown["rows"] += 1
+        if left_status == "null":
+            self.left_null_rows += 1
+        elif left_status == "invalid":
+            self.left_invalid_rows += 1
+        if right_status == "null":
+            self.right_null_rows += 1
+        elif right_status == "invalid":
+            self.right_invalid_rows += 1
+        if left_status == "null" or right_status == "null":
+            self.skipped_null_rows += 1
+            if breakdown is not None:
+                breakdown["skipped_null_rows"] += 1
+            return
+        if left_status == "invalid" or right_status == "invalid":
+            self.skipped_invalid_rows += 1
+            if breakdown is not None:
+                breakdown["skipped_invalid_rows"] += 1
+            return
+
+        if not isinstance(left_value, datetime) or not isinstance(right_value, datetime):
+            raise AssertionError("datetime comparison received non-datetime values")
+        if self.spec["comparison_unit"] == "date":
+            comparable_left = left_value.date()
+            comparable_right = right_value.date()
+        else:
+            comparable_left = left_value
+            comparable_right = right_value
+        if comparable_left < comparable_right:
+            self.left_before_right_rows += 1
+            if breakdown is not None:
+                breakdown["left_before_right_rows"] += 1
+        elif comparable_left == comparable_right:
+            self.equal_rows += 1
+            if breakdown is not None:
+                breakdown["equal_rows"] += 1
+        else:
+            self.left_after_right_rows += 1
+            if breakdown is not None:
+                breakdown["left_after_right_rows"] += 1
+
+    @staticmethod
+    def _breakdown_summary(counts: Counter[str]) -> dict[str, int]:
+        comparable_rows = (
+            counts["left_before_right_rows"]
+            + counts["equal_rows"]
+            + counts["left_after_right_rows"]
+        )
+        return {
+            "comparable_rows": comparable_rows,
+            "equal_rows": counts["equal_rows"],
+            "left_after_right_rows": counts["left_after_right_rows"],
+            "left_before_right_rows": counts["left_before_right_rows"],
+            "rows": counts["rows"],
+            "skipped_invalid_rows": counts["skipped_invalid_rows"],
+            "skipped_null_rows": counts["skipped_null_rows"],
+        }
+
+    def summary(self) -> dict[str, Any]:
+        comparable_rows = (
+            self.left_before_right_rows + self.equal_rows + self.left_after_right_rows
+        )
+        result: dict[str, Any] = {
+            "comparable_rows": comparable_rows,
+            "comparison_unit": self.spec["comparison_unit"],
+            "equal_rows": self.equal_rows,
+            "file": self.spec["file"],
+            "kind": self.spec["kind"],
+            "left_after_right_rows": self.left_after_right_rows,
+            "left_before_right_rows": self.left_before_right_rows,
+            "left_column": self.spec["left_column"],
+            "left_invalid_rows": self.left_invalid_rows,
+            "left_null_rows": self.left_null_rows,
+            "right_column": self.spec["right_column"],
+            "right_invalid_rows": self.right_invalid_rows,
+            "right_null_rows": self.right_null_rows,
+            "rows": self.rows,
+            "skipped_invalid_rows": self.skipped_invalid_rows,
+            "skipped_null_rows": self.skipped_null_rows,
+        }
+        if "breakdown_column" in self.spec:
+            result["breakdown"] = {
+                "column": self.spec["breakdown_column"],
+                "null": self._breakdown_summary(
+                    self.breakdown_counts[BREAKDOWN_NULL]
+                ),
+                "other": self._breakdown_summary(
+                    self.breakdown_counts[BREAKDOWN_OTHER]
+                ),
+                "published_values": {
+                    value: self._breakdown_summary(self.breakdown_counts[value])
+                    for value in self.spec["_breakdown_published_values"]
+                },
+            }
+        return result
 
 
 def _require_dict(value: Any, label: str) -> dict[str, Any]:
@@ -240,6 +512,7 @@ def load_contract(path: Path) -> dict[str, Any]:
 
     joins = _require_list(contract.get("join_amplifications"), "join_amplifications")
     join_names: set[str] = set()
+    join_by_name: dict[str, dict[str, Any]] = {}
     for raw_join in joins:
         join = _require_dict(raw_join, "join_amplifications[]")
         name = _validate_name(join.get("name"), "join_amplification.name")
@@ -271,6 +544,179 @@ def load_contract(path: Path) -> dict[str, Any]:
             )
             if len(side["columns"]) != len(join["anchor_columns"]):
                 raise ProfileError(f"join amplification key widths do not match: {name}")
+        join_by_name[name] = join
+
+    raw_value_profiles = contract.get("value_profiles")
+    if raw_value_profiles is None:
+        value_profiles: dict[str, Any] = {
+            "type_checks": [],
+            "domain_counts": [],
+            "datetime_comparisons": [],
+            "amount_reconciliations": [],
+        }
+    else:
+        value_profiles = _require_dict(raw_value_profiles, "value_profiles")
+        for collection_name in (
+            "type_checks",
+            "domain_counts",
+            "datetime_comparisons",
+            "amount_reconciliations",
+        ):
+            value_profiles[collection_name] = _require_list(
+                value_profiles.get(collection_name), f"value_profiles.{collection_name}"
+            )
+
+    type_check_by_file_column: dict[tuple[str, str], dict[str, Any]] = {}
+    for raw_type_check in value_profiles["type_checks"]:
+        type_check = _require_dict(raw_type_check, "value_profiles.type_checks[]")
+        file_name = _validate_name(type_check.get("file"), "type_check.file")
+        if file_name not in file_by_name:
+            raise ProfileError("type check references an unknown file")
+        column = _validate_name(type_check.get("column"), "type_check.column")
+        if column not in file_by_name[file_name]["headers"]:
+            raise ProfileError("type check references an unknown column")
+        target_type = _validate_name(
+            type_check.get("target_type"), "type_check.target_type"
+        )
+        if target_type not in {"integer", "decimal", "timestamp"}:
+            raise ProfileError("type check has an unsupported target_type")
+        key = (file_name, column)
+        if key in type_check_by_file_column:
+            raise ProfileError("contract has duplicate type checks")
+        if target_type == "timestamp":
+            value_format = type_check.get("format")
+            if not isinstance(value_format, str) or not value_format:
+                raise ProfileError("timestamp type check requires a format")
+        elif "format" in type_check:
+            raise ProfileError("only timestamp type checks may define a format")
+        type_check_by_file_column[key] = type_check
+
+    domain_names: set[str] = set()
+    domain_by_file_column: dict[tuple[str, str], dict[str, Any]] = {}
+    for raw_domain in value_profiles["domain_counts"]:
+        domain = _require_dict(raw_domain, "value_profiles.domain_counts[]")
+        name = _validate_name(domain.get("name"), "domain_count.name")
+        file_name = _validate_name(domain.get("file"), f"{name}.file")
+        if name in domain_names or file_name not in file_by_name:
+            raise ProfileError(f"invalid domain count contract: {name}")
+        column = _validate_name(domain.get("column"), f"{name}.column")
+        if column not in file_by_name[file_name]["headers"]:
+            raise ProfileError(f"domain count references an unknown column: {name}")
+        published_values = _require_list(
+            domain.get("published_values"), f"{name}.published_values"
+        )
+        if not published_values:
+            raise ProfileError(f"domain count has no published values: {name}")
+        validated_values = [
+            _validate_name(value, f"{name}.published_values")
+            for value in published_values
+        ]
+        if len(validated_values) != len(set(validated_values)):
+            raise ProfileError(f"domain count has duplicate published values: {name}")
+        domain["published_values"] = validated_values
+        domain_key = (file_name, column)
+        if domain_key in domain_by_file_column:
+            raise ProfileError("contract has duplicate domain counts for a column")
+        domain_by_file_column[domain_key] = domain
+        domain_names.add(name)
+
+    comparison_names: set[str] = set()
+    for raw_comparison in value_profiles["datetime_comparisons"]:
+        comparison = _require_dict(
+            raw_comparison, "value_profiles.datetime_comparisons[]"
+        )
+        name = _validate_name(comparison.get("name"), "datetime_comparison.name")
+        file_name = _validate_name(comparison.get("file"), f"{name}.file")
+        if name in comparison_names or file_name not in file_by_name:
+            raise ProfileError(f"invalid datetime comparison contract: {name}")
+        for side in ("left", "right"):
+            column = _validate_name(
+                comparison.get(f"{side}_column"), f"{name}.{side}_column"
+            )
+            type_check = type_check_by_file_column.get((file_name, column))
+            if type_check is None or type_check["target_type"] != "timestamp":
+                raise ProfileError(
+                    f"datetime comparison requires timestamp type checks: {name}"
+                )
+        comparison_unit = _validate_name(
+            comparison.get("comparison_unit"), f"{name}.comparison_unit"
+        )
+        kind = _validate_name(comparison.get("kind"), f"{name}.kind")
+        if comparison_unit not in {"timestamp", "date"}:
+            raise ProfileError(f"invalid datetime comparison unit: {name}")
+        if kind not in {"chronology", "delivery_timing"}:
+            raise ProfileError(f"invalid datetime comparison kind: {name}")
+        if "breakdown_column" in comparison:
+            breakdown_column = _validate_name(
+                comparison.get("breakdown_column"), f"{name}.breakdown_column"
+            )
+            if breakdown_column not in file_by_name[file_name]["headers"]:
+                raise ProfileError(
+                    f"datetime breakdown column must belong to the same file: {name}"
+                )
+            breakdown_domain = domain_by_file_column.get(
+                (file_name, breakdown_column)
+            )
+            if breakdown_domain is None:
+                raise ProfileError(
+                    f"datetime breakdown requires a published domain count: {name}"
+                )
+            comparison["_breakdown_published_values"] = breakdown_domain[
+                "published_values"
+            ]
+        comparison_names.add(name)
+
+    reconciliation_names: set[str] = set()
+    for raw_reconciliation in value_profiles["amount_reconciliations"]:
+        reconciliation = _require_dict(
+            raw_reconciliation, "value_profiles.amount_reconciliations[]"
+        )
+        name = _validate_name(reconciliation.get("name"), "amount_reconciliation.name")
+        join_name = _validate_name(
+            reconciliation.get("join_amplification"), f"{name}.join_amplification"
+        )
+        if name in reconciliation_names or join_name not in join_by_name:
+            raise ProfileError(f"invalid amount reconciliation contract: {name}")
+        join = join_by_name[join_name]
+        for side_name in ("left", "right"):
+            selected_columns = _validate_columns(
+                reconciliation.get(f"{side_name}_amount_columns"),
+                label=f"{name}.{side_name}_amount_columns",
+                headers=join[side_name]["amount_columns"],
+            )
+            if not set(selected_columns).issubset(join[side_name]["amount_columns"]):
+                raise ProfileError(
+                    f"amount reconciliation references an untracked amount: {name}"
+                )
+            side_file = join[side_name]["file"]
+            for column in selected_columns:
+                type_check = type_check_by_file_column.get((side_file, column))
+                if type_check is None or type_check["target_type"] != "decimal":
+                    raise ProfileError(
+                        f"amount reconciliation requires decimal type checks: {name}"
+                    )
+            reconciliation[f"{side_name}_amount_columns"] = selected_columns
+        if "anchor_breakdown_column" in reconciliation:
+            anchor_column = _validate_name(
+                reconciliation.get("anchor_breakdown_column"),
+                f"{name}.anchor_breakdown_column",
+            )
+            anchor_file = join["anchor_file"]
+            if anchor_column not in file_by_name[anchor_file]["headers"]:
+                raise ProfileError(
+                    f"amount breakdown column must belong to the anchor file: {name}"
+                )
+            breakdown_domain = domain_by_file_column.get((anchor_file, anchor_column))
+            if breakdown_domain is None:
+                raise ProfileError(
+                    f"amount breakdown requires a published domain count: {name}"
+                )
+            reconciliation["_anchor_breakdown_published_values"] = breakdown_domain[
+                "published_values"
+            ]
+        reconciliation_names.add(name)
+
+    contract["value_profiles"] = value_profiles
 
     return contract
 
@@ -355,7 +801,7 @@ def _canonical_json(value: Any) -> bytes:
 def _scan_sources(
     data_dir: Path,
     contract: dict[str, Any],
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     paths = _validate_input_files(data_dir, contract)
     candidate_trackers: dict[str, dict[str, tuple[list[str], KeyTracker]]] = {}
     group_trackers: dict[str, dict[str, tuple[list[str], KeyTracker]]] = {}
@@ -367,6 +813,25 @@ def _scan_sources(
         spec["name"]: JoinRuntime(spec)
         for spec in contract["join_amplifications"]
     }
+    type_runtimes_by_file: dict[str, dict[str, TypeCheckRuntime]] = defaultdict(dict)
+    for spec in contract["value_profiles"]["type_checks"]:
+        type_runtimes_by_file[spec["file"]][spec["column"]] = TypeCheckRuntime(spec)
+    domain_runtimes_by_file: dict[str, dict[str, DomainCountRuntime]] = defaultdict(dict)
+    for spec in contract["value_profiles"]["domain_counts"]:
+        domain_runtimes_by_file[spec["file"]][spec["name"]] = DomainCountRuntime(spec)
+    comparison_runtimes_by_file: dict[
+        str, dict[str, DatetimeComparisonRuntime]
+    ] = defaultdict(dict)
+    for spec in contract["value_profiles"]["datetime_comparisons"]:
+        comparison_runtimes_by_file[spec["file"]][spec["name"]] = (
+            DatetimeComparisonRuntime(spec)
+        )
+    reconciliation_breakdowns: dict[str, dict[Key, str]] = defaultdict(dict)
+    reconciliations_by_anchor_file: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for reconciliation in contract["value_profiles"]["amount_reconciliations"]:
+        if "anchor_breakdown_column" in reconciliation:
+            join = join_runtimes[reconciliation["join_amplification"]].spec
+            reconciliations_by_anchor_file[join["anchor_file"]].append(reconciliation)
 
     for file_spec in contract["files"]:
         file_name = file_spec["name"]
@@ -439,6 +904,50 @@ def _scan_sources(
                             runtime.left.add(row)
                         if spec["right"]["file"] == file_name:
                             runtime.right.add(row)
+
+                    parsed_values: dict[str, ParseResult] = {}
+                    for column, runtime in type_runtimes_by_file[file_name].items():
+                        parsed_values[column] = runtime.add(row[column])  # type: ignore[arg-type]
+                    for runtime in domain_runtimes_by_file[file_name].values():
+                        runtime.add(row[runtime.spec["column"]])  # type: ignore[arg-type]
+                    for runtime in comparison_runtimes_by_file[file_name].values():
+                        runtime.add(
+                            parsed_values[runtime.spec["left_column"]],
+                            parsed_values[runtime.spec["right_column"]],
+                            (
+                                row[runtime.spec["breakdown_column"]]
+                                if "breakdown_column" in runtime.spec
+                                else None
+                            ),  # type: ignore[arg-type]
+                        )
+                    for reconciliation in reconciliations_by_anchor_file[file_name]:
+                        join = join_runtimes[
+                            reconciliation["join_amplification"]
+                        ].spec
+                        anchor_key = _key_from_row(row, join["anchor_columns"])
+                        if anchor_key is not None:
+                            breakdown_value = row[
+                                reconciliation["anchor_breakdown_column"]
+                            ]
+                            breakdown_group = _breakdown_group(
+                                breakdown_value,  # type: ignore[arg-type]
+                                reconciliation[
+                                    "_anchor_breakdown_published_values"
+                                ],
+                            )
+                            breakdowns = reconciliation_breakdowns[
+                                reconciliation["name"]
+                            ]
+                            previous_group = breakdowns.get(anchor_key)
+                            if (
+                                previous_group is not None
+                                and previous_group != breakdown_group
+                            ):
+                                raise ProfileError(
+                                    "anchor key has conflicting breakdown values: "
+                                    f"{reconciliation['name']}"
+                                )
+                            breakdowns[anchor_key] = breakdown_group
         except ProfileError:
             raise
         except (csv.Error, UnicodeError) as exc:
@@ -635,7 +1144,207 @@ def _scan_sources(
         "relationships": relationship_profiles,
         "tables": table_profiles,
     }
-    return manifest, profile
+
+    file_to_table = {
+        file_spec["name"]: file_spec["table"] for file_spec in contract["files"]
+    }
+    value_table_profiles: dict[str, Any] = {}
+    for file_name, table_name in sorted(file_to_table.items(), key=lambda item: item[1]):
+        type_summaries = {
+            column: runtime.summary()
+            for column, runtime in sorted(type_runtimes_by_file[file_name].items())
+        }
+        domain_summaries = {
+            name: runtime.summary()
+            for name, runtime in sorted(domain_runtimes_by_file[file_name].items())
+        }
+        if type_summaries or domain_summaries:
+            value_table_profiles[table_name] = {
+                "domain_counts": domain_summaries,
+                "file": file_name,
+                "type_checks": type_summaries,
+            }
+
+    comparison_profiles = {
+        name: runtime.summary()
+        for file_runtimes in comparison_runtimes_by_file.values()
+        for name, runtime in sorted(file_runtimes.items())
+    }
+
+    reconciliation_profiles: dict[str, Any] = {}
+    for reconciliation in sorted(
+        contract["value_profiles"]["amount_reconciliations"],
+        key=lambda item: item["name"],
+    ):
+        runtime = join_runtimes[reconciliation["join_amplification"]]
+        anchor_keys = set(runtime.anchor.counts)
+        left_keys = set(runtime.left.keys.counts) & anchor_keys
+        right_keys = set(runtime.right.keys.counts) & anchor_keys
+        common_keys = left_keys & right_keys
+        incomplete_keys: set[Key] = set()
+        for column in reconciliation["left_amount_columns"]:
+            incomplete_keys.update(runtime.left.incomplete_keys[column])
+        for column in reconciliation["right_amount_columns"]:
+            incomplete_keys.update(runtime.right.incomplete_keys[column])
+        incomplete_common_keys = common_keys & incomplete_keys
+        eligible_keys = common_keys - incomplete_keys
+
+        left_total = Decimal(0)
+        right_total = Decimal(0)
+        absolute_difference_total = Decimal(0)
+        maximum_absolute_difference = Decimal(0)
+        exact_match_keys = 0
+        left_greater_keys = 0
+        right_greater_keys = 0
+        amount_breakdown_counts: dict[str, Counter[str]] = defaultdict(Counter)
+        breakdown_by_key = reconciliation_breakdowns[reconciliation["name"]]
+        if "anchor_breakdown_column" in reconciliation:
+            for key in anchor_keys:
+                group_counts = amount_breakdown_counts[
+                    breakdown_by_key.get(key, BREAKDOWN_OTHER)
+                ]
+                group_counts["anchor_keys"] += 1
+                if key in common_keys:
+                    group_counts["keys_with_both_sides"] += 1
+                    if key in incomplete_common_keys:
+                        group_counts["incomplete_common_keys"] += 1
+                    else:
+                        group_counts["eligible_keys"] += 1
+                elif key in left_keys:
+                    group_counts["keys_with_left_only"] += 1
+                elif key in right_keys:
+                    group_counts["keys_with_right_only"] += 1
+                else:
+                    group_counts["keys_with_neither_side"] += 1
+        difference_buckets = {
+            "absolute_difference_lte_0_01": 0,
+            "absolute_difference_gt_0_01_lte_1": 0,
+            "absolute_difference_gt_1_lte_10": 0,
+            "absolute_difference_gt_10": 0,
+        }
+        for key in sorted(eligible_keys, key=repr):
+            left_value = sum(
+                (runtime.left.sums[column].get(key, Decimal(0))
+                 for column in reconciliation["left_amount_columns"]),
+                Decimal(0),
+            )
+            right_value = sum(
+                (runtime.right.sums[column].get(key, Decimal(0))
+                 for column in reconciliation["right_amount_columns"]),
+                Decimal(0),
+            )
+            left_total += left_value
+            right_total += right_value
+            difference = right_value - left_value
+            absolute_difference = abs(difference)
+            absolute_difference_total += absolute_difference
+            maximum_absolute_difference = max(
+                maximum_absolute_difference, absolute_difference
+            )
+            if difference == 0:
+                exact_match_keys += 1
+                if "anchor_breakdown_column" in reconciliation:
+                    amount_breakdown_counts[breakdown_by_key[key]][
+                        "exact_match_keys"
+                    ] += 1
+            elif difference < 0:
+                left_greater_keys += 1
+                if "anchor_breakdown_column" in reconciliation:
+                    amount_breakdown_counts[breakdown_by_key[key]][
+                        "left_greater_keys"
+                    ] += 1
+            else:
+                right_greater_keys += 1
+                if "anchor_breakdown_column" in reconciliation:
+                    amount_breakdown_counts[breakdown_by_key[key]][
+                        "right_greater_keys"
+                    ] += 1
+            if difference == 0:
+                continue
+            if absolute_difference <= Decimal("0.01"):
+                difference_buckets["absolute_difference_lte_0_01"] += 1
+            elif absolute_difference <= Decimal("1"):
+                difference_buckets["absolute_difference_gt_0_01_lte_1"] += 1
+            elif absolute_difference <= Decimal("10"):
+                difference_buckets["absolute_difference_gt_1_lte_10"] += 1
+            else:
+                difference_buckets["absolute_difference_gt_10"] += 1
+
+        reconciliation_profile: dict[str, Any] = {
+            "absolute_difference_buckets": difference_buckets,
+            "absolute_difference_total": _decimal_text(absolute_difference_total),
+            "anchor_keys": len(anchor_keys),
+            "eligible_keys": len(eligible_keys),
+            "exact_match_keys": exact_match_keys,
+            "incomplete_common_keys": len(incomplete_common_keys),
+            "join_amplification": reconciliation["join_amplification"],
+            "difference_bucket_scope": "nonzero absolute differences; descriptive only",
+            "keys_with_both_sides": len(common_keys),
+            "keys_with_left_only": len(left_keys - right_keys),
+            "keys_with_neither_side": len(anchor_keys - left_keys - right_keys),
+            "keys_with_right_only": len(right_keys - left_keys),
+            "left_amount_columns": reconciliation["left_amount_columns"],
+            "left_greater_keys": left_greater_keys,
+            "left_total_on_eligible_keys": _decimal_text(left_total),
+            "maximum_absolute_key_difference": _decimal_text(
+                maximum_absolute_difference
+            ),
+            "net_difference_right_minus_left": _decimal_text(
+                right_total - left_total
+            ),
+            "right_amount_columns": reconciliation["right_amount_columns"],
+            "right_greater_keys": right_greater_keys,
+            "right_total_on_eligible_keys": _decimal_text(right_total),
+            "scope": "anchor keys with both sides and complete selected amount values",
+        }
+        if "anchor_breakdown_column" in reconciliation:
+            def amount_group_summary(counts: Counter[str]) -> dict[str, int]:
+                return {
+                    field_name: counts[field_name]
+                    for field_name in (
+                        "anchor_keys",
+                        "keys_with_both_sides",
+                        "eligible_keys",
+                        "incomplete_common_keys",
+                        "keys_with_left_only",
+                        "keys_with_right_only",
+                        "keys_with_neither_side",
+                        "exact_match_keys",
+                        "left_greater_keys",
+                        "right_greater_keys",
+                    )
+                }
+
+            reconciliation_profile["anchor_breakdown"] = {
+                "column": reconciliation["anchor_breakdown_column"],
+                "null": amount_group_summary(
+                    amount_breakdown_counts[BREAKDOWN_NULL]
+                ),
+                "other": amount_group_summary(
+                    amount_breakdown_counts[BREAKDOWN_OTHER]
+                ),
+                "published_values": {
+                    value: amount_group_summary(amount_breakdown_counts[value])
+                    for value in reconciliation[
+                        "_anchor_breakdown_published_values"
+                    ]
+                },
+            }
+        reconciliation_profiles[reconciliation["name"]] = reconciliation_profile
+
+    value_profile = {
+        "amount_reconciliations": reconciliation_profiles,
+        "datetime_comparisons": dict(sorted(comparison_profiles.items())),
+        "profile_scope": [
+            "type_convertibility",
+            "published_domain_distribution",
+            "datetime_comparisons",
+            "anchor_grain_amount_reconciliation",
+        ],
+        "tables": value_table_profiles,
+        "value_profile_version": 1,
+    }
+    return manifest, profile, value_profile
 
 
 def _render_markdown(manifest: dict[str, Any], profile: dict[str, Any]) -> bytes:
@@ -772,17 +1481,253 @@ def _render_markdown(manifest: dict[str, Any], profile: dict[str, Any]) -> bytes
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
+def _render_value_markdown(
+    manifest: dict[str, Any], value_profile: dict[str, Any]
+) -> bytes:
+    configured_type_columns = sum(
+        len(table_profile["type_checks"])
+        for table_profile in value_profile["tables"].values()
+    )
+    lines = [
+        "# 원천 데이터 값 프로파일",
+        "",
+        "집계 관찰 결과이며 승인된 데이터 제약이나 지표 정의가 아닙니다.",
+        f"핵심 질문에 필요한 계약 지정 {configured_type_columns}개 열만 선택 검사했으며 9개 파일의 모든 열을 검사한 결과가 아닙니다.",
+        "계약에 공개를 허용한 도메인 값만 표시하며 기타 값, 원천 행, 식별자와 샘플은 표시하지 않습니다.",
+        "타입 변환 가능성은 Python 파서 기준의 사전 점검이며 PostgreSQL 변환 성공을 보장하지 않습니다.",
+        "원천 timestamp에는 timezone 정보가 없어 별도의 timezone을 추정하지 않습니다.",
+        "상품 측 금액과 결제 측 금액의 비교는 원천 간 대사 관찰이며 매출·이익을 뜻하지 않습니다.",
+        "금액 차이 구간은 분포 설명용이며 통과 기준이 아닙니다.",
+        "정확히 같은 키는 별도 집계하며 절대 차이 구간에는 포함하지 않습니다.",
+        "",
+        f"- Dataset: `{manifest['dataset']['slug']}`",
+        f"- Manifest SHA-256: `{value_profile['source_manifest_sha256']}`",
+        "",
+        "## 타입 변환 가능성",
+        "",
+        "| 테이블 | 열 | 대상 타입 | 전체 | NULL | 변환 가능 | 변환 실패 | 0 | 음수 | 최소 | 최대 |",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    type_rows = 0
+    for table_name, table_profile in sorted(value_profile["tables"].items()):
+        for column, summary in sorted(table_profile["type_checks"].items()):
+            type_rows += 1
+            lines.append(
+                f"| `{table_name}` | `{column}` | `{summary['target_type']}` | "
+                f"{summary['rows']} | {summary['null_rows']} | "
+                f"{summary['parseable_rows']} | {summary['invalid_rows']} | "
+                f"{summary.get('zero_rows', 'N/A')} | "
+                f"{summary.get('negative_rows', 'N/A')} | "
+                f"{summary['minimum'] if summary['minimum'] is not None else 'N/A'} | "
+                f"{summary['maximum'] if summary['maximum'] is not None else 'N/A'} |"
+            )
+    if type_rows == 0:
+        lines.append("| - | - | - | 0 | 0 | 0 | 0 | - | - | - | - |")
+    lines.extend(
+        [
+            "",
+            "최소·최대는 해당 열에서 변환 가능한 값의 범위이며 데이터셋 전체 기간이나 범위를 뜻하지 않습니다.",
+        ]
+    )
+    shipping_profile = value_profile["tables"].get("order_items", {}).get(
+        "type_checks", {}
+    ).get("shipping_limit_date")
+    if shipping_profile is not None:
+        lines.append(
+            "`shipping_limit_date`의 최대값이 2020년으로 관찰되는 이유는 후속 원천·모델 계약에서 확인합니다."
+        )
+
+    lines.extend(
+        [
+            "",
+            "## 공개 가능한 도메인 분포",
+            "",
+            "명시된 값은 관찰을 위해 공개한 값이며 업무상 허용값으로 승인된 것은 아닙니다.",
+            "",
+            "| 테이블 | 프로파일 | 값 | 행 | NULL | 기타 행 | 기타 고유값 수 |",
+            "|---|---|---|---:|---:|---:|---:|",
+        ]
+    )
+    domain_rows = 0
+    for table_name, table_profile in sorted(value_profile["tables"].items()):
+        for name, summary in sorted(table_profile["domain_counts"].items()):
+            for value, count in summary["published_value_counts"].items():
+                domain_rows += 1
+                lines.append(
+                    f"| `{table_name}` | `{name}` | `{value}` | {count} | "
+                    f"{summary['null_rows']} | {summary['other_rows']} | "
+                    f"{summary['other_distinct_values']} |"
+                )
+    if domain_rows == 0:
+        lines.append("| - | - | - | 0 | 0 | 0 | 0 |")
+
+    lines.extend(
+        [
+            "",
+            "## 날짜·시간 비교",
+            "",
+            "왼쪽과 오른쪽의 선후 관계를 집계하며 chronology와 delivery_timing을 구분합니다.",
+            "전체표에는 주문 상태 필터를 적용하지 않았으며, 상태별 표를 함께 확인해야 결측과 역전을 오류로 오해하지 않습니다.",
+            "timestamp 비교와 date 비교는 다릅니다. 예정일이 자정이면 같은 달력 날짜의 배송도 timestamp상 늦게 보일 수 있습니다.",
+            "`review_creation↔customer_delivery`와 `shipping_limit↔purchase`는 서로 다른 파일을 연결해야 하므로 후속 모델 계약 검토 항목입니다.",
+            "",
+            "| 비교 | 왼쪽 열 | 오른쪽 열 | 종류 | 단위 | 비교 가능 | NULL로 비교 불가 | 변환 실패로 비교 불가 | 왼쪽 < 오른쪽 | 같음 | 왼쪽 > 오른쪽 | 왼쪽 NULL/실패 | 오른쪽 NULL/실패 |",
+            "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for name, summary in sorted(value_profile["datetime_comparisons"].items()):
+        lines.append(
+            f"| `{name}` | `{summary['left_column']}` | `{summary['right_column']}` | "
+            f"`{summary['kind']}` | `{summary['comparison_unit']}` | "
+            f"{summary['comparable_rows']} | {summary['skipped_null_rows']} | "
+            f"{summary['skipped_invalid_rows']} | {summary['left_before_right_rows']} | "
+            f"{summary['equal_rows']} | {summary['left_after_right_rows']} | "
+            f"{summary['left_null_rows']}/{summary['left_invalid_rows']} | "
+            f"{summary['right_null_rows']}/{summary['right_invalid_rows']} |"
+        )
+    if not value_profile["datetime_comparisons"]:
+        lines.append(
+            "| - | - | - | - | - | 0 | 0 | 0 | 0 | 0 | 0 | 0/0 | 0/0 |"
+        )
+    timestamp_delivery = value_profile["datetime_comparisons"].get(
+        "delivered_vs_estimated_timestamp"
+    )
+    date_delivery = value_profile["datetime_comparisons"].get(
+        "delivered_vs_estimated_date"
+    )
+    if timestamp_delivery is not None and date_delivery is not None:
+        same_date_after = (
+            timestamp_delivery["left_after_right_rows"]
+            - date_delivery["left_after_right_rows"]
+        )
+        lines.extend(
+            [
+                "",
+                f"같은 달력 날짜지만 timestamp 기준으로 배송 시각이 예정 시각보다 늦은 행은 {same_date_after}건입니다.",
+            ]
+        )
+
+    for name, summary in sorted(value_profile["datetime_comparisons"].items()):
+        breakdown = summary.get("breakdown")
+        if breakdown is None:
+            continue
+        lines.extend(
+            [
+                "",
+                f"### `{name}` 상태별",
+                "",
+                "| 주문 상태 | 전체 | 비교 가능 | NULL로 비교 불가 | 변환 실패로 비교 불가 | 왼쪽 < 오른쪽 | 같음 | 왼쪽 > 오른쪽 |",
+                "|---|---:|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
+        breakdown_rows = [
+            (f"`{value}`", counts)
+            for value, counts in breakdown["published_values"].items()
+        ]
+        breakdown_rows.extend(
+            [
+                ("기타(값 비공개)", breakdown["other"]),
+                ("NULL", breakdown["null"]),
+            ]
+        )
+        for label, counts in breakdown_rows:
+            lines.append(
+                f"| {label} | {counts['rows']} | {counts['comparable_rows']} | "
+                f"{counts['skipped_null_rows']} | {counts['skipped_invalid_rows']} | "
+                f"{counts['left_before_right_rows']} | {counts['equal_rows']} | "
+                f"{counts['left_after_right_rows']} |"
+            )
+
+    lines.extend(["", "## 주문 기준 상품 측·결제 측 금액 대사", ""])
+    for name, summary in sorted(value_profile["amount_reconciliations"].items()):
+        left_columns = " + ".join(summary["left_amount_columns"])
+        right_columns = " + ".join(summary["right_amount_columns"])
+        buckets = summary["absolute_difference_buckets"]
+        lines.extend(
+            [
+                f"### `{name}`",
+                "",
+                "- 비교 범위: 기준 키 중 상품·결제 양쪽이 존재하고 선택한 금액값이 모두 변환 가능한 키",
+                f"- 상품 측 계산: 주문별 `SUM({left_columns})`",
+                f"- 결제 측 계산: 주문별 `SUM({right_columns})`",
+                "- 주문 상태 필터: 적용하지 않음",
+                f"- 전체 기준 키: {summary['anchor_keys']}",
+                f"- 양쪽 존재 / 비교 가능 / 값 불완전: {summary['keys_with_both_sides']} / {summary['eligible_keys']} / {summary['incomplete_common_keys']}",
+                f"- 상품 측만 / 결제 측만 / 양쪽 없음: {summary['keys_with_left_only']} / {summary['keys_with_right_only']} / {summary['keys_with_neither_side']}",
+                f"- 정확히 같음 / 상품 측 큼 / 결제 측 큼: {summary['exact_match_keys']} / {summary['left_greater_keys']} / {summary['right_greater_keys']}",
+                f"- 상품 측 합계: {summary['left_total_on_eligible_keys']}",
+                f"- 결제 측 합계: {summary['right_total_on_eligible_keys']}",
+                f"- 순차이(결제 측-상품 측): {summary['net_difference_right_minus_left']}",
+                "- 순차이는 양수·음수 주문이 서로 상쇄될 수 있어 품질 통과 기준으로 사용하지 않음",
+                f"- 절대 차이 합계 / 키별 최대 절대 차이: {summary['absolute_difference_total']} / {summary['maximum_absolute_key_difference']}",
+                f"- 0이 아닌 절대 차이 구간(0 < |차이| ≤ 0.01 / >0.01–1 / >1–10 / >10): {buckets['absolute_difference_lte_0_01']} / {buckets['absolute_difference_gt_0_01_lte_1']} / {buckets['absolute_difference_gt_1_lte_10']} / {buckets['absolute_difference_gt_10']}",
+                "",
+            ]
+        )
+        breakdown = summary.get("anchor_breakdown")
+        if breakdown is not None:
+            lines.extend(
+                [
+                    "#### 주문 상태별 비교 범위와 방향",
+                    "",
+                    "| 주문 상태 | 기준 주문 | 양쪽 있음 | 비교 가능 | 금액 불완전 | 상품만 | 결제만 | 둘 다 없음 | 같음 | 상품 측 큼 | 결제 측 큼 |",
+                    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+                ]
+            )
+            breakdown_rows = [
+                (f"`{value}`", counts)
+                for value, counts in breakdown["published_values"].items()
+            ]
+            breakdown_rows.extend(
+                [
+                    ("기타(값 비공개)", breakdown["other"]),
+                    ("NULL", breakdown["null"]),
+                ]
+            )
+            for label, counts in breakdown_rows:
+                lines.append(
+                    f"| {label} | {counts['anchor_keys']} | "
+                    f"{counts['keys_with_both_sides']} | {counts['eligible_keys']} | "
+                    f"{counts['incomplete_common_keys']} | {counts['keys_with_left_only']} | "
+                    f"{counts['keys_with_right_only']} | {counts['keys_with_neither_side']} | "
+                    f"{counts['exact_match_keys']} | {counts['left_greater_keys']} | "
+                    f"{counts['right_greater_keys']} |"
+                )
+    if not value_profile["amount_reconciliations"]:
+        lines.append("설정된 금액 대사가 없습니다.")
+
+    lines.extend(
+        [
+            "",
+            "## 후속 계약에서 결정할 항목",
+            "",
+            "- 어떤 주문 상태를 각 지표에 포함할지",
+            "- 배송 예정일 초과를 timestamp와 calendar date 중 어느 단위로 판단할지",
+            "- 시간 순서가 뒤집힌 원천 행을 보존·경고·제외 중 어떻게 처리할지",
+            "- 상품 측 금액과 결제 측 금액의 차이에 허용 기준을 둘지와 예외 처리 방식",
+            "- 관찰된 도메인을 dbt accepted-values 테스트에서 fail 또는 warn으로 관리할지",
+        ]
+    )
+
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
 def generate_reports(data_dir: Path, contract_path: Path) -> dict[str, bytes]:
     contract = load_contract(contract_path)
-    manifest, profile = _scan_sources(data_dir, contract)
+    manifest, profile, value_profile = _scan_sources(data_dir, contract)
     manifest_bytes = _canonical_json(manifest)
     profile["source_manifest_sha256"] = hashlib.sha256(manifest_bytes).hexdigest()
+    value_profile["source_manifest_sha256"] = profile["source_manifest_sha256"]
     profile_bytes = _canonical_json(profile)
     markdown_bytes = _render_markdown(manifest, profile)
+    value_profile_bytes = _canonical_json(value_profile)
+    value_markdown_bytes = _render_value_markdown(manifest, value_profile)
     return {
         "source-manifest.json": manifest_bytes,
         "source-profile.json": profile_bytes,
         "source-profile.md": markdown_bytes,
+        "source-value-profile.json": value_profile_bytes,
+        "source-value-profile.md": value_markdown_bytes,
     }
 
 
