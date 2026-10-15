@@ -131,3 +131,58 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 - Validation criterion: PR의 범위가 하나의 작업 단위인지, 최종 검증이 통과했는지,
   진행 단계 변경 시 README가 함께 갱신됐는지 확인한다.
 - Supersedes / Superseded by: 없음
+
+### D-007 — Use item-grain facts and separate trade marts
+
+- Status / Date: Proposed / 2026-10-15
+- Context: 주문에는 여러 상품·판매자·카테고리와 결제행이 연결될 수 있어 주문 grain으로
+  먼저 축약하거나 raw 결제를 직접 조인하면 상세가 사라지거나 금액이 증폭된다.
+- Options considered: 주문 grain 단일 mart, 결제를 item에 배분한 통합 mart,
+  item fact와 category·seller mart 분리
+- Decision: [`model-metric-contracts.md`](model-metric-contracts.md)의 거래 계약을 사용한다.
+  원천 item grain fact를 보존하고, delivered 주문의 purchase month 기준 category·seller
+  mart를 따로 만든다. 상품 금액과 배송비는 분리하며 결제는 주문별 대사 모델에서만 쓴다.
+- Why: 원천 detail과 additive 금액을 보존하면서 근거 없는 결제 배분과 1:N fan-out을
+  피하기 위해서다.
+- Consequences and limitations: 그룹별 distinct 주문·상품 수는 그룹 간 더할 수 없고,
+  상품 금액을 매출·이익으로 표현하지 않는다. item이 없는 주문은 fact에 포함되지 않는다.
+- Validation criterion: item fact의 행·key·금액이 staging과 대사되고, mart의 additive
+  지표가 delivered fact와 대사되며 fan-out fixture가 직접 조인의 오류를 재현한다.
+- Supersedes / Superseded by: 없음
+
+### D-008 — Compare delivery timing and reviews at order grain
+
+- Status / Date: Proposed / 2026-10-15
+- Context: 리뷰는 주문당 여러 행일 수 있고, 예정일은 현재 snapshot에서 date-like 값으로
+  관찰돼 timestamp와 calendar-date 지연 분류가 달라질 수 있다.
+- Options considered: 첫/최신 리뷰 선택 또는 전체 평균, timestamp 또는 calendar date,
+  chronology 이상 주문 삭제 또는 flag 보존
+- Decision: [`model-metric-contracts.md`](model-metric-contracts.md)의 배송·리뷰 계약을
+  사용한다. delivered이며 날짜 비교가 가능한 주문에 리뷰를 주문별 선집계해 결합하고,
+  모든 리뷰의 주문별 평균과 calendar-date 지연 여부를 비교한다. 결측·시간 역전은 원천에
+  보존하고 관련 flag와 제외 건수를 대사한다.
+- Why: 주문을 동일 가중하면서 복수 리뷰 join 중복과 같은 날 배송의 잘못된 지연 분류를
+  피하기 위해서다.
+- Consequences and limitations: 결과는 리뷰가 있는 주문의 관찰적 연관이며 인과 효과가
+  아니다. 복수 리뷰 대표값 정책과 리뷰 누락에 따른 대표성 한계를 함께 공개한다.
+- Validation criterion: review summary가 staging의 행·점수 합과 대사되고, delivered
+  inclusion funnel과 timing 상태가 전체 대상 주문 수와 대사된다.
+- Supersedes / Superseded by: 없음
+
+### D-009 — Separate hard failures from preserved data anomalies
+
+- Status / Date: Proposed / 2026-10-15
+- Context: 원천에는 확정적인 key·domain 규칙과 아직 업무 오류로 단정할 수 없는 0값,
+  시간 역전, 금액 차이와 mapping 누락이 함께 있다.
+- Options considered: 모든 이상 관찰을 fail, 모든 검사를 warn, 확정 규칙만 fail하고
+  나머지는 flag·대사 후 정책 결정
+- Decision: [`model-metric-contracts.md`](model-metric-contracts.md)의 품질 정책을 사용한다.
+  key·cast·exact domain과 core FK는 fail로, 원인이 미정인 이상은 원천을 보존한 채
+  warn·flag·reconciliation으로 관리한다.
+- Why: 명백한 계약 위반은 조기에 차단하면서도 데이터 의미를 확인하기 전에 관찰 행을
+  임의 삭제하거나 정상값으로 교정하지 않기 위해서다.
+- Consequences and limitations: 금액 tolerance와 일부 anomaly 처리 기준은 DB 적재 후에도
+  미정으로 남으며, 관련 분석은 그 정책이 승인되기 전까지 확정하지 않는다.
+- Validation criterion: fail 규칙은 합성 위반 fixture에서 실패하고, 보존 대상 anomaly는
+  모델 행을 삭제하지 않은 채 flag·제외 수와 원천 건수가 대사된다.
+- Supersedes / Superseded by: 없음
