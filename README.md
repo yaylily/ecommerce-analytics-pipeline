@@ -23,8 +23,8 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 
 다음 단계에서는 주문 상태·기준 날짜·거래액과 금액 차이 허용 기준을 계약으로
 확정합니다. 복수 리뷰 처리와 위치 대표값 정책도 모델 구현 전에 결정합니다.
-PostgreSQL 적재, dbt 모델·dbt 데이터 테스트와 대시보드는 아직 구현하지 않았으며
-완료된 기능처럼 표현하지 않습니다.
+PostgreSQL 적재, dbt 모델·데이터 테스트와 post-mart pandas 산출물은 아직 구현하지
+않았으며 완료된 기능처럼 표현하지 않습니다. dashboard는 선택 확장입니다.
 
 ## 해결하려는 문제
 
@@ -47,17 +47,27 @@ Olist에서 주문 한 건에는 여러 주문상품·결제·리뷰가 연결�
 구체적인 지표 공식, 포함할 주문 상태와 기준 날짜는 원천 프로파일링 후 별도
 계약으로 확정합니다. 관찰 데이터의 관계를 인과 효과로 표현하지 않습니다.
 
+## 분석 전달 범위
+
+PostgreSQL과 dbt로 검산된 mart를 만든 뒤, 배송 지연·리뷰 질문 하나를 pandas로
+분석합니다. pandas는 dbt 변환을 다시 구현하지 않고 최종 mart의 탐색·집계·시각화에만
+사용합니다. core 결과물은 재현 가능한 분석 스크립트 1개, 핵심 차트 2개와
+비개발자가 이해할 수 있는 짧은 결과 보고서 1개로 제한합니다.
+
+추가 통계 분석과 dashboard는 core 결과를 완성한 뒤 지원 직무에 필요할 때만 확장합니다.
+
 ## 선택 확장
 
-핵심 거래 모델을 완성한 뒤 Olist Marketing Funnel 데이터를 연결해 판매자
-리드 → 계약 → 첫 주문 → 초기 거래 흐름을 분석할 수 있습니다. 이 확장은 핵심
-거래 모델 완료 전에는 구현하지 않습니다.
+작은 dashboard는 pandas 분석과 결과 보고서가 완성된 뒤 BI 지원에 필요할 때만
+추가합니다. Olist Marketing Funnel 데이터 연결도 핵심 모델과 분석 결과를 완료한 뒤
+재평가하며, 둘 다 core 완료 조건은 아닙니다.
 
 ## 계획한 기술
 
 - Core: SQL · PostgreSQL · dbt Core (`dbt-postgres`)
-- Support: Python · Docker Compose · Git
-- Later: 작은 대시보드 · fixture 기반 CI
+- Analysis: Python · pandas · matplotlib
+- Support: Docker Compose · Git
+- Later: 선택적 작은 dashboard · fixture 기반 CI
 
 Docker는 로컬 PostgreSQL을 재현하기 위한 보조 도구이며, 클라우드·실시간 처리와
 복잡한 오케스트레이션은 이 프로젝트의 목표가 아닙니다.

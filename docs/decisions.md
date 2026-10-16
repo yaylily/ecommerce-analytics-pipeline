@@ -78,7 +78,8 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 - Consequences and limitations: Docker·인프라 전문성이나 클라우드 운영 경험으로
   표현하지 않는다. 대시보드와 CI 도구는 core model 검증 후 결정한다.
 - Validation criterion: 실제 환경을 만든 뒤 clean setup과 dbt build의 재현성을 확인한다.
-- Supersedes / Superseded by: 없음
+- Supersedes / Superseded by: post-mart Python 사용 범위만 D-010으로 확장하며,
+  PostgreSQL·dbt core 결정은 유지한다.
 
 ### D-004 — Record AI-assisted decisions through contracts and verification
 
@@ -186,3 +187,23 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 - Validation criterion: fail 규칙은 합성 위반 fixture에서 실패하고, 보존 대상 anomaly는
   모델 행을 삭제하지 않은 채 flag·제외 수와 원천 건수가 대사된다.
 - Supersedes / Superseded by: 없음
+
+### D-010 — Use pandas only as the post-mart analysis layer
+
+- Status / Date: Accepted / 2026-10-16
+- Context: SQL·dbt 모델링뿐 아니라 Python 기반 탐색과 비개발자 대상 결과 설명을
+  증명해야 하지만, 같은 변환을 dbt와 pandas에 중복 구현하면 두 기준이 생기고 범위가
+  불필요하게 커진다.
+- Options considered: pandas를 사용하지 않음, dbt 변환을 pandas로 재구현,
+  검증된 mart를 입력으로 제한된 분석만 수행
+- Decision: 세 번째 방식을 사용한다. core mart 완성 후 배송 지연·리뷰 질문 하나를
+  pandas로 분석하고, 재현 가능한 스크립트 1개·핵심 차트 2개·짧은 비개발자용 결과
+  보고서 1개를 만든다.
+- Why: SQL·dbt를 데이터 의미와 품질의 단일 기준으로 유지하면서 pandas 데이터 처리,
+  시각화와 비즈니스 해석 능력을 실제 결과물로 보여주기 위해서다.
+- Consequences and limitations: pandas는 mart의 grain·지표를 다시 정의하지 않는다.
+  추가 통계 분석, dashboard, Marketing Funnel과 새로운 데이터셋은 core 범위에 넣지 않는다.
+- Validation criterion: pandas 입력 행·key와 핵심 집계가 mart와 대사되고, 같은 입력과
+  명령에서 동일한 승인 지표를 사용하는 차트 2개와 보고서용 수치가 재현된다. 보고서는
+  가정·분모·제외 조건·한계와 비인과 경계를 설명하며, 사용자가 주요 집계를 설명할 수 있다.
+- Supersedes / Superseded by: 없음. D-003의 PostgreSQL·dbt core 결정은 유지한다.
