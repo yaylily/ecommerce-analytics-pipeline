@@ -6,7 +6,7 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**원천 값 품질 프로파일 검토 완료 · model/metric contract 설계 단계**
+**model/metric contract 승인 완료 · PostgreSQL raw 적재 준비 단계**
 
 Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 다중도,
 관계의 미연결 행과 fan-out을 집계하고 상품·결제 직접 조인의 금액 증폭을
@@ -15,16 +15,22 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 
 이후 핵심 열의 타입 변환 가능성, 주문 상태·결제 수단·리뷰 점수 분포, 날짜·시간
 선후 관계와 주문 단위 상품 측·결제 측 금액 차이를 추가로 집계했습니다. 이 결과는
-상태별 결측·시간 역전과 금액 대사의 의미와 한계까지 검토했습니다. 관찰값 자체는
-아직 승인된 데이터 제약이나 지표 정의가 아닙니다.
+상태별 결측·시간 역전과 금액 대사의 의미와 한계까지 검토했습니다. 이 관찰을 근거로
+모델·지표·품질 정책을 승인했지만, 고정 snapshot의 관찰값 자체를 일반적인 업무상
+진리로 확대하지 않습니다.
 
 - 구조 결과: [`reports/source-profile.md`](reports/source-profile.md)
 - 값 품질 결과: [`reports/source-value-profile.md`](reports/source-value-profile.md)
+- 승인 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
 
-다음 단계에서는 주문 상태·기준 날짜·거래액과 금액 차이 허용 기준을 계약으로
-확정합니다. 복수 리뷰 처리와 위치 대표값 정책도 모델 구현 전에 결정합니다.
-PostgreSQL 적재, dbt 모델·데이터 테스트와 post-mart pandas 산출물은 아직 구현하지
-않았으며 완료된 기능처럼 표현하지 않습니다. dashboard는 선택 확장입니다.
+거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 사용자가 의미와 영향을 검토한 뒤
+[`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)와 D-007~D-009로
+승인했습니다. 승인은 구현 완료를 뜻하지 않습니다.
+
+다음 단계에서는 PostgreSQL raw schema와 재현 가능한 적재·행 수 검산을 구현합니다.
+dbt 모델·데이터 테스트와 post-mart pandas 산출물은 아직 구현하지 않았으며 완료된
+기능처럼 표현하지 않습니다. 금액 tolerance 등 `[UNRESOLVED]` 정책은 계약에 지정한
+적재 후 관찰을 거쳐 별도로 결정하며, dashboard는 선택 확장입니다.
 
 ## 해결하려는 문제
 
@@ -44,8 +50,8 @@ Olist에서 주문 한 건에는 여러 주문상품·결제·리뷰가 연결�
 1. 카테고리와 판매자별 주문·상품 거래 특성은 어떻게 다른가?
 2. 약속한 배송일을 넘긴 주문과 리뷰 점수 사이에는 어떤 관계가 있는가?
 
-구체적인 지표 공식, 포함할 주문 상태와 기준 날짜는 원천 프로파일링 후 별도
-계약으로 확정합니다. 관찰 데이터의 관계를 인과 효과로 표현하지 않습니다.
+구체적인 지표 공식, 포함할 주문 상태, 기준 날짜와 review 처리 방식은 승인된
+model/metric contract를 따릅니다. 관찰 데이터의 관계를 인과 효과로 표현하지 않습니다.
 
 ## 분석 전달 범위
 

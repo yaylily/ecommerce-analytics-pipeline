@@ -135,7 +135,7 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 
 ### D-007 — Use item-grain facts and separate trade marts
 
-- Status / Date: Proposed / 2026-10-15
+- Status / Date: Accepted / 2026-10-17
 - Context: 주문에는 여러 상품·판매자·카테고리와 결제행이 연결될 수 있어 주문 grain으로
   먼저 축약하거나 raw 결제를 직접 조인하면 상세가 사라지거나 금액이 증폭된다.
 - Options considered: 주문 grain 단일 mart, 결제를 item에 배분한 통합 mart,
@@ -153,7 +153,7 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 
 ### D-008 — Compare delivery timing and reviews at order grain
 
-- Status / Date: Proposed / 2026-10-15
+- Status / Date: Accepted / 2026-10-17
 - Context: 리뷰는 주문당 여러 행일 수 있고, 예정일은 현재 snapshot에서 date-like 값으로
   관찰돼 timestamp와 calendar-date 지연 분류가 달라질 수 있다.
 - Options considered: 첫/최신 리뷰 선택 또는 전체 평균, timestamp 또는 calendar date,
@@ -172,7 +172,7 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 
 ### D-009 — Separate hard failures from preserved data anomalies
 
-- Status / Date: Proposed / 2026-10-15
+- Status / Date: Accepted / 2026-10-17
 - Context: 원천에는 확정적인 key·domain 규칙과 아직 업무 오류로 단정할 수 없는 0값,
   시간 역전, 금액 차이와 mapping 누락이 함께 있다.
 - Options considered: 모든 이상 관찰을 fail, 모든 검사를 warn, 확정 규칙만 fail하고

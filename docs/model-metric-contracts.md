@@ -1,10 +1,10 @@
-# Model and metric contract proposal
+# Model and metric contracts
 
-> Status: Proposed / 2026-10-15
+> Status: Accepted / 2026-10-17
 >
-> 아직 구현 또는 승인된 계약이 아니다. 사용자가 grain·필터·지표·예외의 의미와
-> 영향을 확인하고 명시적으로 승인한 뒤에만 `Accepted`로 전환한다. 중요한 승인 흔적은
-> 이 문서를 참조하는 decision log에도 남기며, 미정 항목에 의존하는 구현은 시작하지 않는다.
+> 사용자가 grain·필터·지표·예외의 의미와 영향을 확인하고 승인했다. 이 계약은 구현의
+> 기준이며 구현 완료를 의미하지 않는다. `[UNRESOLVED]` 항목에 의존하는 추가 정책은
+> 해당 관찰과 승인이 끝나기 전까지 확정하지 않는다.
 
 ## 목적과 근거
 
@@ -21,7 +21,7 @@
 같은 관찰 수치를 이 문서에 다시 복사하지 않고, 여기에는 채택할 의미와 검산 규칙만
 기록한다.
 
-## 공통 원칙 — Proposed
+## 공통 원칙 — Accepted
 
 - raw와 staging은 원천 행을 보존한다. 업무 지표에서 제외할 행을 적재 단계에서
   삭제하거나 날짜를 임의로 교정하지 않는다.
@@ -37,7 +37,7 @@
 
 ---
 
-# 1. 거래 모델 계약 — Proposed
+# 1. 거래 모델 계약 — Accepted
 
 ## 비즈니스 질문
 
@@ -128,7 +128,7 @@ stg_order_items (many)
 
 ---
 
-# 2. 배송·리뷰 모델 계약 — Proposed
+# 2. 배송·리뷰 모델 계약 — Accepted
 
 ## 비즈니스 질문
 
@@ -230,7 +230,7 @@ delivery_timing_status
 
 ---
 
-# 3. 데이터 품질 정책 — Proposed
+# 3. 데이터 품질 정책 — Accepted
 
 ## Fail
 
@@ -289,15 +289,15 @@ delivery_timing_status
 
 ## 사용자 승인 항목
 
-- [ ] 전체 상태 item fact를 보존하고 primary 거래 mart는 delivered만 사용한다.
-- [ ] 거래 기준 기간은 purchase calendar month를 사용한다.
-- [ ] category와 seller mart를 분리하고 그룹별 distinct 주문 수는 서로 더하지 않는다.
-- [ ] 상품 거래액은 `SUM(price)`, 배송비는 별도 지표로 둔다.
-- [ ] 배송·리뷰 final mart는 주문당 1행으로 만든다.
-- [ ] 복수 리뷰는 주문별 모든 리뷰 평균을 primary 값으로 사용한다.
-- [ ] 배송 지연은 delivered 주문의 calendar date 기준으로 정의한다.
-- [ ] 배송일 NULL과 chronology 역전은 삭제하지 않고 flag·warn·제외 수 대사로 관리한다.
-- [ ] 확실한 schema/domain만 fail로 두고 금액 tolerance 등은 적재 후 결정한다.
-- [ ] timezone 없는 원천 timestamp는 timezone 추정 없이 `timestamp without time zone`으로 다룬다.
-- [ ] 결제는 거래 fact에 배분하지 않고 주문별 지원 모델에서 상품 측 금액과 별도 대사한다.
-- [ ] core FK는 fail, category translation 누락은 보존, geolocation 관계는 core 비범위로 둔다.
+- [x] 전체 상태 item fact를 보존하고 primary 거래 mart는 delivered만 사용한다.
+- [x] 거래 기준 기간은 purchase calendar month를 사용한다.
+- [x] category와 seller mart를 분리하고 그룹별 distinct 주문 수는 서로 더하지 않는다.
+- [x] 상품 거래액은 `SUM(price)`, 배송비는 별도 지표로 둔다.
+- [x] 배송·리뷰 final mart는 주문당 1행으로 만든다.
+- [x] 복수 리뷰는 주문별 모든 리뷰 평균을 primary 값으로 사용한다.
+- [x] 배송 지연은 delivered 주문의 calendar date 기준으로 정의한다.
+- [x] 배송일 NULL과 chronology 역전은 삭제하지 않고 flag·warn·제외 수 대사로 관리한다.
+- [x] 확실한 schema/domain만 fail로 두고 금액 tolerance 등은 적재 후 결정한다.
+- [x] timezone 없는 원천 timestamp는 timezone 추정 없이 `timestamp without time zone`으로 다룬다.
+- [x] 결제는 거래 fact에 배분하지 않고 주문별 지원 모델에서 상품 측 금액과 별도 대사한다.
+- [x] core FK는 fail, category translation 누락은 보존, geolocation 관계는 core 비범위로 둔다.
