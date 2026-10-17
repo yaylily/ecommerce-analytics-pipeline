@@ -6,7 +6,7 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**원천 값 품질 프로파일 검토 완료 · model/metric contract 설계 단계**
+**model/metric contract 승인 완료 · PostgreSQL raw 적재 준비 단계**
 
 Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 다중도,
 관계의 미연결 행과 fan-out을 집계하고 상품·결제 직접 조인의 금액 증폭을
@@ -15,16 +15,22 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 
 이후 핵심 열의 타입 변환 가능성, 주문 상태·결제 수단·리뷰 점수 분포, 날짜·시간
 선후 관계와 주문 단위 상품 측·결제 측 금액 차이를 추가로 집계했습니다. 이 결과는
-상태별 결측·시간 역전과 금액 대사의 의미와 한계까지 검토했습니다. 관찰값 자체는
-아직 승인된 데이터 제약이나 지표 정의가 아닙니다.
+상태별 결측·시간 역전과 금액 대사의 의미와 한계까지 검토했습니다. 이 관찰을 근거로
+모델·지표·품질 정책을 승인했지만, 고정 snapshot의 관찰값 자체를 일반적인 업무상
+진리로 확대하지 않습니다.
 
 - 구조 결과: [`reports/source-profile.md`](reports/source-profile.md)
 - 값 품질 결과: [`reports/source-value-profile.md`](reports/source-value-profile.md)
+- 승인 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
 
-다음 단계에서는 주문 상태·기준 날짜·거래액과 금액 차이 허용 기준을 계약으로
-확정합니다. 복수 리뷰 처리와 위치 대표값 정책도 모델 구현 전에 결정합니다.
-PostgreSQL 적재, dbt 모델·dbt 데이터 테스트와 대시보드는 아직 구현하지 않았으며
-완료된 기능처럼 표현하지 않습니다.
+거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 사용자가 의미와 영향을 검토한 뒤
+[`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)와 D-007~D-009로
+승인했습니다. 승인은 구현 완료를 뜻하지 않습니다.
+
+다음 단계에서는 PostgreSQL raw schema와 재현 가능한 적재·행 수 검산을 구현합니다.
+dbt 모델·데이터 테스트와 post-mart pandas 산출물은 아직 구현하지 않았으며 완료된
+기능처럼 표현하지 않습니다. 금액 tolerance 등 `[UNRESOLVED]` 정책은 계약에 지정한
+적재 후 관찰을 거쳐 별도로 결정하며, dashboard는 선택 확장입니다.
 
 ## 해결하려는 문제
 
@@ -44,20 +50,30 @@ Olist에서 주문 한 건에는 여러 주문상품·결제·리뷰가 연결�
 1. 카테고리와 판매자별 주문·상품 거래 특성은 어떻게 다른가?
 2. 약속한 배송일을 넘긴 주문과 리뷰 점수 사이에는 어떤 관계가 있는가?
 
-구체적인 지표 공식, 포함할 주문 상태와 기준 날짜는 원천 프로파일링 후 별도
-계약으로 확정합니다. 관찰 데이터의 관계를 인과 효과로 표현하지 않습니다.
+구체적인 지표 공식, 포함할 주문 상태, 기준 날짜와 review 처리 방식은 승인된
+model/metric contract를 따릅니다. 관찰 데이터의 관계를 인과 효과로 표현하지 않습니다.
+
+## 분석 전달 범위
+
+PostgreSQL과 dbt로 검산된 mart를 만든 뒤, 배송 지연·리뷰 질문 하나를 pandas로
+분석합니다. pandas는 dbt 변환을 다시 구현하지 않고 최종 mart의 탐색·집계·시각화에만
+사용합니다. core 결과물은 재현 가능한 분석 스크립트 1개, 핵심 차트 2개와
+비개발자가 이해할 수 있는 짧은 결과 보고서 1개로 제한합니다.
+
+추가 통계 분석과 dashboard는 core 결과를 완성한 뒤 지원 직무에 필요할 때만 확장합니다.
 
 ## 선택 확장
 
-핵심 거래 모델을 완성한 뒤 Olist Marketing Funnel 데이터를 연결해 판매자
-리드 → 계약 → 첫 주문 → 초기 거래 흐름을 분석할 수 있습니다. 이 확장은 핵심
-거래 모델 완료 전에는 구현하지 않습니다.
+작은 dashboard는 pandas 분석과 결과 보고서가 완성된 뒤 BI 지원에 필요할 때만
+추가합니다. Olist Marketing Funnel 데이터 연결도 핵심 모델과 분석 결과를 완료한 뒤
+재평가하며, 둘 다 core 완료 조건은 아닙니다.
 
 ## 계획한 기술
 
 - Core: SQL · PostgreSQL · dbt Core (`dbt-postgres`)
-- Support: Python · Docker Compose · Git
-- Later: 작은 대시보드 · fixture 기반 CI
+- Analysis: Python · pandas · matplotlib
+- Support: Docker Compose · Git
+- Later: 선택적 작은 dashboard · fixture 기반 CI
 
 Docker는 로컬 PostgreSQL을 재현하기 위한 보조 도구이며, 클라우드·실시간 처리와
 복잡한 오케스트레이션은 이 프로젝트의 목표가 아닙니다.
