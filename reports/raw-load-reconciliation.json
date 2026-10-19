@@ -1,0 +1,86 @@
+{
+  "all_counts_match": true,
+  "dataset": {
+    "name": "Brazilian E-Commerce Public Dataset by Olist",
+    "slug": "olistbr/brazilian-ecommerce",
+    "url": "https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce"
+  },
+  "generated_by_command": "load",
+  "load_mode": "transactional_full_refresh",
+  "mismatch_count": 0,
+  "postgresql_version": "15.19 (Debian 15.19-1.pgdg12+2)",
+  "raw_column_type": "text",
+  "raw_empty_field_policy": "empty_text",
+  "report_version": 1,
+  "schema": "raw",
+  "source_manifest_sha256": "041d600393762a8894f995816d71f805ac09672b8ce2ea7d134ce3a0669f71bb",
+  "table_count": 9,
+  "tables": [
+    {
+      "actual_rows": 1000163,
+      "expected_rows": 1000163,
+      "matches": true,
+      "source_file": "olist_geolocation_dataset.csv",
+      "table": "geolocation"
+    },
+    {
+      "actual_rows": 99441,
+      "expected_rows": 99441,
+      "matches": true,
+      "source_file": "olist_customers_dataset.csv",
+      "table": "customers"
+    },
+    {
+      "actual_rows": 71,
+      "expected_rows": 71,
+      "matches": true,
+      "source_file": "product_category_name_translation.csv",
+      "table": "category_translation"
+    },
+    {
+      "actual_rows": 32951,
+      "expected_rows": 32951,
+      "matches": true,
+      "source_file": "olist_products_dataset.csv",
+      "table": "products"
+    },
+    {
+      "actual_rows": 3095,
+      "expected_rows": 3095,
+      "matches": true,
+      "source_file": "olist_sellers_dataset.csv",
+      "table": "sellers"
+    },
+    {
+      "actual_rows": 99441,
+      "expected_rows": 99441,
+      "matches": true,
+      "source_file": "olist_orders_dataset.csv",
+      "table": "orders"
+    },
+    {
+      "actual_rows": 112650,
+      "expected_rows": 112650,
+      "matches": true,
+      "source_file": "olist_order_items_dataset.csv",
+      "table": "order_items"
+    },
+    {
+      "actual_rows": 103886,
+      "expected_rows": 103886,
+      "matches": true,
+      "source_file": "olist_order_payments_dataset.csv",
+      "table": "payments"
+    },
+    {
+      "actual_rows": 99224,
+      "expected_rows": 99224,
+      "matches": true,
+      "source_file": "olist_order_reviews_dataset.csv",
+      "table": "reviews"
+    }
+  ],
+  "total_actual_rows": 1550922,
+  "total_expected_rows": 1550922,
+  "verification_scope": "source_bytes_schema_and_row_counts"
+}

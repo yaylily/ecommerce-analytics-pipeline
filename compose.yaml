@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:15.19-bookworm
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-olist}
+      POSTGRES_USER: ${PGUSER:-olist}
+      POSTGRES_PASSWORD: ${PGPASSWORD:?copy .env.example to .env and set PGPASSWORD}
+    ports:
+      - "127.0.0.1:${PGPORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready --host=127.0.0.1 --username=\"$${POSTGRES_USER}\" --dbname=\"$${POSTGRES_DB}\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  postgres_data:
