@@ -26,7 +26,20 @@ product_category_name_translation.csv
 1. 위 Kaggle 원본 페이지에서 데이터를 내려받아 압축을 푼다.
 2. 저장소의 `data/raw/` 아래에 위 9개 CSV를 둔다. 다른 CSV가 섞여 있거나
    예상 파일이 빠지면 프로파일러는 실패한다.
-3. 저장소 루트에서 다음 명령을 실행한다.
+3. 로컬 환경 파일과 Python 환경을 준비한다. `.env`의 password는 로컬 전용 값으로
+   바꾸며 파일 자체는 커밋하지 않는다.
+
+```bash
+cp .env.example .env
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+기본 host port는 다른 로컬 PostgreSQL과의 충돌을 줄이기 위해 `55432`를 사용한다.
+필요하면 `.env`의 `PGPORT`만 다른 빈 포트로 바꾼다. loader는 이 프로젝트의 안전
+경계에 맞춰 `localhost`, `127.0.0.1`, `::1` 이외의 DB host를 거부한다.
+
+4. 저장소 루트에서 source profile을 재검증한다.
 
 ```bash
 python3 scripts/profile_source.py build \
@@ -39,7 +52,7 @@ python3 scripts/profile_source.py check \
   --contract config/olist-source-contract.json \
   --output-dir reports
 
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 ```
 
 `build`는 실제 CSV를 검사하고 구조 프로파일과 값 프로파일을 포함한 집계 보고서를
@@ -52,6 +65,44 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 열의 타입 변환·최소/최대, 공개 허용 도메인 분포, 날짜 비교와 주문 단위 금액
 대사 집계만 남는다. 미등록 도메인은 값 없이 행 수와 고유값 수만 기록하며,
 실제 ID, 위치값, 리뷰 문장, 알 수 없는 원문 값과 로컬 절대경로는 남기지 않는다.
+
+5. PostgreSQL 15를 시작하고 raw snapshot을 적재·검산한다.
+
+```bash
+docker compose up -d --wait
+RUN_POSTGRES_TESTS=1 PYTHONDONTWRITEBYTECODE=1 \
+  .venv/bin/python -m unittest tests.test_load_raw_integration -v
+.venv/bin/python scripts/load_raw.py load --data-dir data/raw
+.venv/bin/python scripts/load_raw.py check --data-dir data/raw
+```
+
+`load`와 `check`는 DB 연결 전에 source profiler의 `check`를 다시 실행한다. `load`는
+계약에 있는 9개 테이블만 하나의 transaction에서 `TRUNCATE`한 뒤 PostgreSQL `COPY`로
+적재하며, 파일을 읽는 동안 계산한 크기·SHA-256와 적재 후 전수 행 수가 모두 맞을 때만
+commit한다. 따라서 재실행해도 행이 누적되지 않고 중간 실패 시 직전 정상 상태로
+rollback된다. `check`는 DB를 바꾸지 않고 raw schema·열과 행 수만 다시 확인한다.
+
+raw의 모든 열은 nullable `text`이며 CSV의 빈 field도 빈 text로 보존한다. 값 변형을
+막기 위해 raw table에 constraint·index·trigger·rewrite rule·RLS를 허용하지 않는다.
+숫자·날짜 변환, `NULLIF`, trim, dedup과 업무 규칙은 이 단계에서 적용하지 않고 이후
+dbt staging의 명시적 계약으로 처리한다. 결과는
+`reports/raw-load-reconciliation.json`과 사람이 읽는
+`reports/raw-load-reconciliation.md`에 집계값만 기록한다.
+
+`check`는 하나의 repeatable-read DB snapshot에서 schema와 행 수를 확인하지만 DB 값
+전체를 원천과 다시 비교하지는 않는다. 같은 행 수를 유지한 임의 값 변경까지 탐지하는
+명령으로 해석하지 않는다.
+
+작업을 멈출 때는 다음 명령을 사용한다. named volume은 유지되므로 다시 시작해도 적재한
+테이블이 남는다.
+
+```bash
+docker compose down
+```
+
+`.env`의 DB명·사용자·password를 바꿔도 이미 만들어진 named volume의 초기 계정은
+자동으로 바뀌지 않는다. volume 삭제는 복구가 필요한 명시적 reset 작업이므로 기본
+절차에 포함하지 않는다.
 
 ## Optional extension
 
