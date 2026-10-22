@@ -1,0 +1,321 @@
+version: 2
+
+models:
+  - name: stg_geolocation
+    description: >-
+      Source-aligned geolocation rows. Zip prefix and coordinates remain text
+      because this non-unique source is outside the core join contract.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'geolocation')
+    columns:
+      - name: geolocation_zip_code_prefix
+        data_type: text
+      - name: geolocation_lat
+        data_type: text
+      - name: geolocation_lng
+        data_type: text
+      - name: geolocation_city
+        data_type: text
+      - name: geolocation_state
+        data_type: text
+
+  - name: stg_customers
+    description: One source customer record per customer_id.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'customers')
+    columns:
+      - name: customer_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_unique_id
+        data_type: text
+        description: Repeated across customer records; intentionally not unique.
+      - name: customer_zip_code_prefix
+        data_type: text
+      - name: customer_city
+        data_type: text
+      - name: customer_state
+        data_type: text
+
+  - name: stg_category_translation
+    description: One optional English display-name mapping per source category.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'category_translation')
+    columns:
+      - name: product_category_name
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+      - name: product_category_name_english
+        data_type: text
+
+  - name: stg_products
+    description: >-
+      One source product record per product_id; no rows are filtered. Descriptive
+      and physical attributes outside the approved core cast profile remain text
+      and are not used by the current downstream metrics.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'products')
+    columns:
+      - name: product_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+      - name: product_category_name
+        data_type: text
+        description: Nullable original category; translation is not joined here.
+      - name: product_name_length
+        data_type: text
+      - name: product_description_length
+        data_type: text
+      - name: product_photo_count
+        data_type: text
+      - name: product_weight_g
+        data_type: text
+      - name: product_length_cm
+        data_type: text
+      - name: product_height_cm
+        data_type: text
+      - name: product_width_cm
+        data_type: text
+
+  - name: stg_sellers
+    description: One source seller record per seller_id; geolocation is not joined.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'sellers')
+    columns:
+      - name: seller_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+      - name: seller_zip_code_prefix
+        data_type: text
+      - name: seller_city
+        data_type: text
+      - name: seller_state
+        data_type: text
+
+  - name: stg_orders
+    description: >-
+      One source order per order_id. All statuses and source rows are retained;
+      timestamp values remain timezone-naive.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'orders')
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+      - name: order_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - approved
+                  - canceled
+                  - created
+                  - delivered
+                  - invoiced
+                  - processing
+                  - shipped
+                  - unavailable
+      - name: order_purchase_timestamp
+        data_type: timestamp without time zone
+        data_tests:
+          - not_null
+      - name: order_approved_at
+        data_type: timestamp without time zone
+      - name: order_delivered_carrier_date
+        data_type: timestamp without time zone
+      - name: order_delivered_customer_date
+        data_type: timestamp without time zone
+      - name: order_estimated_delivery_date
+        data_type: timestamp without time zone
+        data_tests:
+          - not_null
+
+  - name: stg_order_items
+    description: One source order-item row per order_id and order_item_id.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'order_items')
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - order_item_id
+      - expression_is_true:
+          arguments:
+            expression: order_item_id > 0
+      - expression_is_true:
+          arguments:
+            expression: price > 0
+      - expression_is_true:
+          arguments:
+            expression: freight_value >= 0
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: order_item_id
+        data_type: integer
+        data_tests:
+          - not_null
+      - name: product_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_products')
+                field: product_id
+      - name: seller_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_sellers')
+                field: seller_id
+      - name: shipping_limit_date
+        data_type: timestamp without time zone
+      - name: price
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: freight_value
+        data_type: numeric
+        data_tests:
+          - not_null
+
+  - name: stg_payments
+    description: One source payment row per order_id and payment_sequential.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'payments')
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - payment_sequential
+      - expression_is_true:
+          arguments:
+            expression: payment_sequential > 0
+      - expression_is_true:
+          arguments:
+            expression: payment_installments >= 0
+      - expression_is_true:
+          arguments:
+            expression: payment_value >= 0
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: payment_sequential
+        data_type: integer
+        data_tests:
+          - not_null
+      - name: payment_type
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - boleto
+                  - credit_card
+                  - debit_card
+                  - not_defined
+                  - voucher
+      - name: payment_installments
+        data_type: integer
+        data_tests:
+          - not_null
+      - name: payment_value
+        data_type: numeric
+        data_tests:
+          - not_null
+
+  - name: stg_reviews
+    description: >-
+      One source review row per review_id and order_id. Neither column alone is
+      assumed to identify an order-level review summary.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: source('olist_raw', 'reviews')
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - review_id
+              - order_id
+    columns:
+      - name: review_id
+        data_type: text
+        data_tests:
+          - not_null
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: review_score
+        data_type: integer
+        data_tests:
+          - not_null
+          - accepted_values:
+              name: accepted_review_score_1_to_5
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: review_comment_title
+        data_type: text
+      - name: review_comment_message
+        data_type: text
+      - name: review_creation_date
+        data_type: timestamp without time zone
+      - name: review_answer_timestamp
+        data_type: timestamp without time zone
