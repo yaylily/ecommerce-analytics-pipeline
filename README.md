@@ -6,7 +6,7 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**PostgreSQL raw 적재·dbt staging 검증 완료 · intermediate audit 모델 준비 단계**
+**주문 단위 intermediate·audit 구현·검증 완료 · 결과 검토 단계**
 
 Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 다중도,
 관계의 미연결 행과 fan-out을 집계하고 상품·결제 직접 조인의 금액 증폭을
@@ -23,6 +23,7 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 - 값 품질 결과: [`reports/source-value-profile.md`](reports/source-value-profile.md)
 - raw 적재 결과: [`reports/raw-load-reconciliation.md`](reports/raw-load-reconciliation.md)
 - dbt staging 결과: [`reports/dbt-staging-validation.md`](reports/dbt-staging-validation.md)
+- intermediate·audit 결과: [`reports/intermediate-audit-validation.md`](reports/intermediate-audit-validation.md)
 - 승인 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
 
 거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 사용자가 의미와 영향을 검토한 뒤
@@ -37,10 +38,16 @@ raw 9개와 1:1로 대응하는 dbt staging table을 만들고, 정확히 빈 �
 해석했습니다. 계약한 숫자·timestamp 변환을 전체 행에 적용한 뒤 행 수 보존, key,
 domain, 범위와 core relationship을 검사한 55개 data test가 모두 통과했습니다.
 
-다음 단계에서는 보존한 결측·시간 순서·금액 차이와 mapping 누락을 intermediate audit
-모델에서 flag와 건수로 확인합니다. fact·mart와 post-mart pandas 산출물은 아직 구현하지
-않았으며 완료된 기능처럼 표현하지 않습니다. 금액 tolerance 등 `[UNRESOLVED]` 정책은
-계약에 지정한 관찰을 거쳐 별도로 결정하며, dashboard는 선택 확장입니다.
+주문상품·결제·리뷰를 주문 단위로 먼저 집계하고, 전체 주문 기준 금액 대사와 배송
+timing·chronology flag를 구현했습니다. 원천 count·금액·점수 합과 주문 key를 대사하고,
+상품×결제와 복수 리뷰의 직접 조인 중복을 합성 fixture로 재현한 뒤 선집계 구조에서
+해결됨을 확인했습니다. 결과의 의미와 한계는 검토 중이며, 차이를 오류로 단정하거나
+허용 tolerance를 임의로 만들지 않았습니다.
+
+다음 단계는 결과 검토 후 product/seller dimension과 item fact입니다. Category mapping은
+product dimension에서 다루며, fact·mart와 post-mart pandas 산출물은 아직 구현하지
+않았습니다. `shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼
+표현하지 않으며 dashboard는 선택 확장입니다.
 
 ## 해결하려는 문제
 
