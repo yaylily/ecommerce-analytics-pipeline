@@ -93,6 +93,23 @@ dbt staging의 명시적 계약으로 처리한다. 결과는
 전체를 원천과 다시 비교하지는 않는다. 같은 행 수를 유지한 임의 값 변경까지 탐지하는
 명령으로 해석하지 않는다.
 
+6. 승인된 계약에 따라 dbt staging table을 만들고 품질 테스트를 실행한다.
+
+```bash
+.venv/bin/dbt debug --profiles-dir .
+.venv/bin/dbt build --profiles-dir . --select path:models/staging
+```
+
+staging은 raw table 9개와 1:1로 대응하며 정확히 빈 문자열인 값만 SQL `NULL`로
+바꾼다. 승인된 숫자·timestamp 열은 명시적으로 cast하지만 행 필터, join, 중복 제거와
+값 보정은 하지 않는다. Model contract로 출력 열 이름과 타입을 강제하고, table
+materialization으로 build 시 전체 행의 cast를 평가한다. Data test는 raw와의 행 수,
+key, domain, 범위와 core relationship을 확인한다.
+
+이 구성은 현재 정적 로컬 snapshot을 위한 선택이다. staging build 통과가 모든 값의
+업무적 정확성이나 fact·mart 지표의 정확성을 보장하지는 않는다. 실행 결과와 범위는
+`reports/dbt-staging-validation.md`에서 확인한다.
+
 작업을 멈출 때는 다음 명령을 사용한다. named volume은 유지되므로 다시 시작해도 적재한
 테이블이 남는다.
 

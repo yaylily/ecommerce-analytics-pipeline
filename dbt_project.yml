@@ -1,0 +1,22 @@
+name: ecommerce_analytics_pipeline
+version: 1.0.0
+config-version: 2
+
+profile: ecommerce_analytics_pipeline
+
+model-paths: ["models"]
+test-paths: ["dbt_tests"]
+macro-paths: ["macros"]
+
+target-path: target
+clean-targets:
+  - target
+  - dbt_packages
+  - logs
+
+models:
+  ecommerce_analytics_pipeline:
+    staging:
+      +materialized: table
+      +contract:
+        enforced: true

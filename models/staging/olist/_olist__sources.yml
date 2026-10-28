@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: olist_raw
+    description: >-
+      Olist CSV snapshot loaded without type interpretation by the transactional
+      raw loader. File identity and row counts are recorded in the raw-load report.
+    schema: raw
+    tables:
+      - name: geolocation
+        description: Source geolocation rows; zip prefix is not unique.
+      - name: customers
+        description: Source customer records keyed by customer_id.
+      - name: category_translation
+        description: Portuguese-to-English category display-name mapping.
+      - name: products
+        description: Source product records keyed by product_id.
+      - name: sellers
+        description: Source seller records keyed by seller_id.
+      - name: orders
+        description: Source orders keyed by order_id.
+      - name: order_items
+        description: Source order-item rows keyed by order_id and order_item_id.
+      - name: payments
+        description: Source payment rows keyed by order_id and payment_sequential.
+      - name: reviews
+        description: Source review rows keyed by review_id and order_id.
