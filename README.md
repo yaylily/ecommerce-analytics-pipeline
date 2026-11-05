@@ -6,7 +6,7 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**주문 단위 intermediate·audit 구현·검증 완료 · 결과 검토 단계**
+**상품·판매자 dimension과 주문상품 fact 구현·검증 완료 · 결과 검토 단계**
 
 Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 다중도,
 관계의 미연결 행과 fan-out을 집계하고 상품·결제 직접 조인의 금액 증폭을
@@ -24,6 +24,7 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 - raw 적재 결과: [`reports/raw-load-reconciliation.md`](reports/raw-load-reconciliation.md)
 - dbt staging 결과: [`reports/dbt-staging-validation.md`](reports/dbt-staging-validation.md)
 - intermediate·audit 결과: [`reports/intermediate-audit-validation.md`](reports/intermediate-audit-validation.md)
+- 거래 dimension·fact 결과: [`reports/transaction-fact-validation.md`](reports/transaction-fact-validation.md)
 - 승인 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
 
 거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 사용자가 의미와 영향을 검토한 뒤
@@ -41,13 +42,16 @@ domain, 범위와 core relationship을 검사한 55개 data test가 모두 통�
 주문상품·결제·리뷰를 주문 단위로 먼저 집계하고, 전체 주문 기준 금액 대사와 배송
 timing·chronology flag를 구현했습니다. 원천 count·금액·점수 합과 주문 key를 대사하고,
 상품×결제와 복수 리뷰의 직접 조인 중복을 합성 fixture로 재현한 뒤 선집계 구조에서
-해결됨을 확인했습니다. 결과의 의미와 한계는 검토 중이며, 차이를 오류로 단정하거나
+해결됨을 확인했습니다. 결과의 의미와 한계를 검토했으며, 차이를 오류로 단정하거나
 허용 tolerance를 임의로 만들지 않았습니다.
 
-다음 단계는 결과 검토 후 product/seller dimension과 item fact입니다. Category mapping은
-product dimension에서 다루며, fact·mart와 post-mart pandas 산출물은 아직 구현하지
-않았습니다. `shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼
-표현하지 않으며 dashboard는 선택 확장입니다.
+상품과 판매자 dimension, 전체 상태를 보존하는 주문상품 fact를 구현했습니다. 원문
+카테고리 누락과 번역 누락을 구분하고, 원천 주문상품의 복합 key·행 수·금액을 fact와
+행별·전체 합계로 대사했습니다. 전체 dbt build 184개 노드와 기존 Python 테스트 24개가
+통과했습니다. missing category의 내부 key 문자열은 결과 검토에서 최종 승인하며,
+category·seller 월별 mart와 post-mart pandas 산출물은 아직 구현하지 않았습니다.
+`shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼 표현하지
+않으며 dashboard는 선택 확장입니다.
 
 ## 해결하려는 문제
 

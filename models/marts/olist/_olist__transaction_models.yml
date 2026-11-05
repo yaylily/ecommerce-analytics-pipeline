@@ -1,0 +1,196 @@
+version: 2
+
+models:
+  - name: dim_products
+    description: >-
+      One row per source product. Original and optional English category names
+      remain separate, and source-missing categories are not confused with
+      categories that lack a translation.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: ref('stg_products')
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (category_mapping_status = 'missing_source') =
+              (product_category_name is null)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (category_mapping_status = 'mapped') =
+              (product_category_name is not null and
+              product_category_name_english is not null)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (category_mapping_status = 'unmapped_translation') =
+              (product_category_name is not null and
+              product_category_name_english is null)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              category_key = coalesce(
+              product_category_name, '__missing_source__')
+      - expression_is_true:
+          arguments:
+            expression: >-
+              category_display_name = coalesce(
+              product_category_name_english,
+              product_category_name,
+              'Unknown')
+    columns:
+      - name: product_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_products')
+                field: product_id
+      - name: product_category_name
+        data_type: text
+      - name: product_category_name_english
+        data_type: text
+      - name: category_key
+        data_type: text
+        data_tests:
+          - not_null
+      - name: category_display_name
+        data_type: text
+        data_tests:
+          - not_null
+      - name: category_mapping_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - mapped
+                  - missing_source
+                  - unmapped_translation
+
+  - name: dim_sellers
+    description: >-
+      One row per source seller. Source city, state, and zip prefix are retained
+      without joining the non-unique geolocation source.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: ref('stg_sellers')
+    columns:
+      - name: seller_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_sellers')
+                field: seller_id
+      - name: seller_zip_code_prefix
+        data_type: text
+      - name: seller_city
+        data_type: text
+      - name: seller_state
+        data_type: text
+
+  - name: fct_order_items
+    description: >-
+      One row per source order-item row. All parent order statuses are retained;
+      delivered filtering belongs to downstream trade marts.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: ref('stg_order_items')
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - order_item_id
+      - expression_is_true:
+          arguments:
+            expression: price > 0
+      - expression_is_true:
+          arguments:
+            expression: freight_value >= 0
+      - expression_is_true:
+          arguments:
+            expression: item_side_amount = price + freight_value
+      - expression_is_true:
+          arguments:
+            expression: >-
+              purchase_month =
+              date_trunc('month', order_purchase_timestamp)::date
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: order_item_id
+        data_type: integer
+        data_tests:
+          - not_null
+      - name: product_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+      - name: seller_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_sellers')
+                field: seller_id
+      - name: category_key
+        data_type: text
+        data_tests:
+          - not_null
+      - name: order_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - approved
+                  - canceled
+                  - created
+                  - delivered
+                  - invoiced
+                  - processing
+                  - shipped
+                  - unavailable
+      - name: order_purchase_timestamp
+        data_type: timestamp without time zone
+        data_tests:
+          - not_null
+      - name: purchase_month
+        data_type: date
+        data_tests:
+          - not_null
+      - name: shipping_limit_date
+        data_type: timestamp without time zone
+      - name: price
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: freight_value
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: item_side_amount
+        data_type: numeric
+        data_tests:
+          - not_null
