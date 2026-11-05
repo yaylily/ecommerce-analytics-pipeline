@@ -1,0 +1,313 @@
+version: 2
+
+models:
+  - name: int_order_item_amount_summary
+    description: >-
+      One row per order that has order-item rows. Item-side amounts are aggregated
+      before any join to one-to-many payment or review sources.
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: ordered_item_row_count > 0
+      - expression_is_true:
+          arguments:
+            expression: gross_item_value > 0
+      - expression_is_true:
+          arguments:
+            expression: freight_amount >= 0
+      - expression_is_true:
+          arguments:
+            expression: item_side_amount = gross_item_value + freight_amount
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: ordered_item_row_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: gross_item_value
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: freight_amount
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: item_side_amount
+        data_type: numeric
+        data_tests:
+          - not_null
+
+  - name: int_order_payment_summary
+    description: >-
+      One row per order that has payment rows. Zero-valued payments and zero
+      installments are retained as counts and flags rather than filtered.
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: payment_row_count > 0
+      - expression_is_true:
+          arguments:
+            expression: payment_side_amount >= 0
+      - expression_is_true:
+          arguments:
+            expression: >-
+              zero_payment_value_row_count between 0 and payment_row_count
+      - expression_is_true:
+          arguments:
+            expression: >-
+              zero_payment_installment_row_count between 0 and payment_row_count
+      - expression_is_true:
+          arguments:
+            expression: >-
+              has_zero_payment_value = (zero_payment_value_row_count > 0)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              has_zero_payment_installments =
+              (zero_payment_installment_row_count > 0)
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: payment_row_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: payment_side_amount
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: zero_payment_value_row_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: zero_payment_installment_row_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: has_zero_payment_value
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: has_zero_payment_installments
+        data_type: boolean
+        data_tests:
+          - not_null
+
+  - name: audit_order_amount_reconciliation
+    description: >-
+      One row per source order. Item and payment presence, separately aggregated
+      measures, and exact observed differences are retained for audit only.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: ref('stg_orders')
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: order_status
+        data_type: text
+        data_tests:
+          - not_null
+      - name: has_order_items
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: has_payments
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: amount_presence_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [both, items_only, payments_only, neither]
+      - name: ordered_item_row_count
+        data_type: bigint
+      - name: gross_item_value
+        data_type: numeric
+      - name: freight_amount
+        data_type: numeric
+      - name: item_side_amount
+        data_type: numeric
+      - name: payment_row_count
+        data_type: bigint
+      - name: payment_side_amount
+        data_type: numeric
+      - name: zero_payment_value_row_count
+        data_type: bigint
+      - name: zero_payment_installment_row_count
+        data_type: bigint
+      - name: has_zero_payment_value
+        data_type: boolean
+      - name: has_zero_payment_installments
+        data_type: boolean
+      - name: payment_minus_item_amount
+        data_type: numeric
+      - name: absolute_amount_difference
+        data_type: numeric
+      - name: amount_comparison_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - equal
+                  - payment_side_greater
+                  - item_side_greater
+                  - not_comparable
+
+  - name: int_order_review_summary
+    description: >-
+      One row per order that has reviews. All review scores contribute to the
+      count, sum, unrounded order-level average, minimum, and maximum.
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: review_count >= 1
+      - expression_is_true:
+          arguments:
+            expression: >-
+              order_avg_review_score = review_score_sum::numeric / review_count
+      - expression_is_true:
+          arguments:
+            expression: >-
+              min_review_score <= order_avg_review_score
+              and order_avg_review_score <= max_review_score
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: review_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: review_score_sum
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: order_avg_review_score
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: min_review_score
+        data_type: integer
+        data_tests:
+          - not_null
+      - name: max_review_score
+        data_type: integer
+        data_tests:
+          - not_null
+
+  - name: int_order_delivery_timing
+    description: >-
+      One row per order. Delivery timing is classified only for delivered orders;
+      missing timestamps and observable chronology reversals remain explicit.
+    data_tests:
+      - equal_rowcount:
+          arguments:
+            compare_model: ref('stg_orders')
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: order_status
+        data_type: text
+        data_tests:
+          - not_null
+      - name: order_purchase_timestamp
+        data_type: timestamp without time zone
+        data_tests:
+          - not_null
+      - name: order_approved_at
+        data_type: timestamp without time zone
+      - name: order_delivered_carrier_date
+        data_type: timestamp without time zone
+      - name: order_delivered_customer_date
+        data_type: timestamp without time zone
+      - name: order_estimated_delivery_date
+        data_type: timestamp without time zone
+        data_tests:
+          - not_null
+      - name: is_approval_date_missing
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: is_carrier_date_missing
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: is_delivery_date_missing
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: is_approval_before_purchase
+        data_type: boolean
+      - name: is_carrier_before_purchase
+        data_type: boolean
+      - name: is_carrier_before_approval
+        data_type: boolean
+      - name: is_customer_before_purchase
+        data_type: boolean
+      - name: is_customer_before_carrier
+        data_type: boolean
+      - name: purchase_to_approval_duration
+        data_type: interval
+      - name: purchase_to_carrier_duration
+        data_type: interval
+      - name: carrier_to_customer_duration
+        data_type: interval
+      - name: purchase_to_customer_duration
+        data_type: interval
+      - name: delivery_days_vs_estimate
+        data_type: integer
+      - name: delivery_timing_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - early
+                  - promised_date
+                  - late
+                  - unknown
+                  - not_applicable
+      - name: is_late
+        data_type: boolean
