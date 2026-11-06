@@ -63,8 +63,10 @@
 | `int_order_payment_summary` | 결제행이 있는 주문 1건 | `order_id` | 결제 측 금액·결제행 수를 주문별 선집계 |
 | `audit_order_amount_reconciliation` | 전체 주문 기준 주문 1건 | `order_id` | 양쪽 존재 여부와 금액 차이 보존; core mart에는 미결합 |
 
-`category_key`는 원문 카테고리를 기준으로 하며, 원문 NULL은 명시적인 missing 그룹으로
-보존한다. mart에는 원문명·영문명·mapping status를 함께 노출하고 표시명은
+`category_key`는 원문 카테고리를 기준으로 하며, 원문 NULL은
+`__missing_source__`를 내부 key로 사용하는 명시적인 missing 그룹으로 보존한다.
+원천 category에 같은 문자열이 나타나면 충돌로 fail한다. mart에는
+원문명·영문명·mapping status를 함께 노출하고 표시명은
 `COALESCE(english_name, original_name, 'Unknown')`으로 만든다. 번역 누락을 카테고리
 자체의 누락과 혼동하지 않는다.
 

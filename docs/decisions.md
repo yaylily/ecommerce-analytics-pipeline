@@ -207,3 +207,21 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
   명령에서 동일한 승인 지표를 사용하는 차트 2개와 보고서용 수치가 재현된다. 보고서는
   가정·분모·제외 조건·한계와 비인과 경계를 설명하며, 사용자가 주요 집계를 설명할 수 있다.
 - Supersedes / Superseded by: 없음. D-003의 PostgreSQL·dbt core 결정은 유지한다.
+
+### D-011 — Use a collision-guarded key for missing source category
+
+- Status / Date: Accepted / 2026-11-06
+- Context: 원문 category가 NULL인 상품도 후속 category mart에서 별도 그룹으로 보존해야
+  하지만, 표시명과 내부 집계 key를 같은 값으로 쓰거나 NULL key를 유지하면 역할이
+  섞이고 충돌 여부를 명확히 검사하기 어렵다.
+- Options considered: NULL key 유지, 표시명 `Unknown`을 key로 사용,
+  충돌을 검사하는 별도 sentinel key 사용
+- Decision: 원문 category가 NULL이면 `category_key = '__missing_source__'`를 사용하고
+  표시명은 `Unknown`으로 유지한다. 원천 category에 같은 문자열이 나타나면 fail한다.
+- Why: 원문 누락을 번역 누락과 구분하고, 후속 `GROUP BY`와 fact-to-mart 대사에서
+  missing 그룹을 명시적으로 보존하면서 표시 정책과 내부 key 정책을 분리하기 위해서다.
+- Consequences and limitations: sentinel은 실제 업무 category가 아니며 사용자에게
+  노출할 표시명으로 사용하지 않는다. 다른 데이터셋에 그대로 일반화하지 않는다.
+- Validation criterion: source collision test, mapping 3상태 fixture와 상품·fact
+  reconciliation이 모두 통과한다.
+- Supersedes / Superseded by: 없음
