@@ -1,0 +1,197 @@
+version: 2
+
+models:
+  - name: mart_category_trade_monthly
+    description: >-
+      One row per purchase month and source category key for delivered orders.
+      Item-side amounts are additive, while product and associated-order counts
+      are not additive across category rows.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - purchase_month
+              - category_key
+      - expression_is_true:
+          arguments:
+            expression: >-
+              purchase_month = date_trunc('month', purchase_month)::date
+      - expression_is_true:
+          arguments:
+            expression: gross_item_value > 0
+      - expression_is_true:
+          arguments:
+            expression: freight_amount >= 0
+      - expression_is_true:
+          arguments:
+            expression: item_side_amount = gross_item_value + freight_amount
+      - expression_is_true:
+          arguments:
+            expression: ordered_item_row_count > 0
+      - expression_is_true:
+          arguments:
+            expression: >-
+              distinct_product_count between 1 and ordered_item_row_count
+      - expression_is_true:
+          arguments:
+            expression: >-
+              associated_order_count between 1 and ordered_item_row_count
+      - expression_is_true:
+          arguments:
+            expression: >-
+              category_key = coalesce(
+              product_category_name, '__missing_source__')
+      - expression_is_true:
+          arguments:
+            expression: >-
+              category_display_name = coalesce(
+              product_category_name_english,
+              product_category_name,
+              'Unknown')
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (category_mapping_status = 'missing_source') =
+              (product_category_name is null)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (category_mapping_status = 'mapped') =
+              (product_category_name is not null and
+              product_category_name_english is not null)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (category_mapping_status = 'unmapped_translation') =
+              (product_category_name is not null and
+              product_category_name_english is null)
+    columns:
+      - name: purchase_month
+        data_type: date
+        data_tests:
+          - not_null
+      - name: category_key
+        data_type: text
+        data_tests:
+          - not_null
+      - name: product_category_name
+        data_type: text
+      - name: product_category_name_english
+        data_type: text
+      - name: category_display_name
+        data_type: text
+        data_tests:
+          - not_null
+      - name: category_mapping_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - mapped
+                  - missing_source
+                  - unmapped_translation
+      - name: gross_item_value
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: freight_amount
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: item_side_amount
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: ordered_item_row_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: distinct_product_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: associated_order_count
+        data_type: bigint
+        data_tests:
+          - not_null
+
+  - name: mart_seller_trade_monthly
+    description: >-
+      One row per purchase month and seller for delivered orders. Item-side
+      amounts are additive, while product and associated-order counts are not
+      additive across seller rows.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - purchase_month
+              - seller_id
+      - expression_is_true:
+          arguments:
+            expression: >-
+              purchase_month = date_trunc('month', purchase_month)::date
+      - expression_is_true:
+          arguments:
+            expression: gross_item_value > 0
+      - expression_is_true:
+          arguments:
+            expression: freight_amount >= 0
+      - expression_is_true:
+          arguments:
+            expression: item_side_amount = gross_item_value + freight_amount
+      - expression_is_true:
+          arguments:
+            expression: ordered_item_row_count > 0
+      - expression_is_true:
+          arguments:
+            expression: >-
+              distinct_product_count between 1 and ordered_item_row_count
+      - expression_is_true:
+          arguments:
+            expression: >-
+              associated_order_count between 1 and ordered_item_row_count
+    columns:
+      - name: purchase_month
+        data_type: date
+        data_tests:
+          - not_null
+      - name: seller_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_sellers')
+                field: seller_id
+      - name: seller_zip_code_prefix
+        data_type: text
+      - name: seller_city
+        data_type: text
+      - name: seller_state
+        data_type: text
+      - name: gross_item_value
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: freight_amount
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: item_side_amount
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: ordered_item_row_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: distinct_product_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: associated_order_count
+        data_type: bigint
+        data_tests:
+          - not_null
