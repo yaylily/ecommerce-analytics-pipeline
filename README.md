@@ -48,8 +48,9 @@ timing·chronology flag를 구현했습니다. 원천 count·금액·점수 합�
 상품과 판매자 dimension, 전체 상태를 보존하는 주문상품 fact를 구현했습니다. 원문
 카테고리 누락과 번역 누락을 구분하고, 원천 주문상품의 복합 key·행 수·금액을 fact와
 행별·전체 합계로 대사했습니다. 전체 dbt build 184개 노드와 기존 Python 테스트 24개가
-통과했습니다. missing category의 내부 key 문자열은 결과 검토에서 최종 승인하며,
-category·seller 월별 mart와 post-mart pandas 산출물은 아직 구현하지 않았습니다.
+통과했습니다. missing category는 승인한 `__missing_source__` 내부 key와 충돌 방지
+test로 보존합니다. category·seller 월별 mart와 post-mart pandas 산출물은 아직
+구현하지 않았습니다.
 `shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼 표현하지
 않으며 dashboard는 선택 확장입니다.
 

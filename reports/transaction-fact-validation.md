@@ -184,10 +184,11 @@ unbounded `numeric`과 관련된 메시지다. 위 `WARN=0`은 dbt 실행 노드
 
 ## 7. 사용자 검토 항목
 
-### `[승인 필요]` missing category의 내부 key 표현
+### `[승인 완료]` missing category의 내부 key 표현
 
-현재 구현안은 원문 카테고리가 NULL인 상품에 `category_key = '__missing_source__'`를
-사용한다. 표시명은 계약대로 `Unknown`이다.
+2026-11-06 검토에서 원문 카테고리가 NULL인 상품에
+`category_key = '__missing_source__'`를 사용하는 방식을 승인했다. 표시명은 계약대로
+`Unknown`이다.
 
 이 방식의 목적은 다음과 같다.
 
@@ -196,8 +197,7 @@ unbounded `numeric`과 관련된 메시지다. 위 `WARN=0`은 dbt 실행 노드
 - 후속 category mart에서 금액을 잃지 않고 대사
 
 원천 카테고리에 같은 문자열이 나타나면 충돌하므로 이를 실패시키는 테스트도 두었다.
-이 exact 문자열은 기존 Accepted 계약에 없던 구현 표현이므로 사용자 승인 전에는 계약
-문서에 확정하지 않는다.
+승인한 exact 문자열과 충돌 정책을 model/metric contract와 D-011에 반영했다.
 
 ## 8. 가정과 한계
 
