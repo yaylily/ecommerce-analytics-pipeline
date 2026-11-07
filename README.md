@@ -6,7 +6,7 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**카테고리·판매자 월별 거래 mart 구현·검증 완료 · 결과 검토 단계**
+**배송 지연·리뷰 주문 mart 구현·검증 완료 · 결과 검토 단계**
 
 Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 다중도,
 관계의 미연결 행과 fan-out을 집계하고 상품·결제 직접 조인의 금액 증폭을
@@ -26,6 +26,7 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 - intermediate·audit 결과: [`reports/intermediate-audit-validation.md`](reports/intermediate-audit-validation.md)
 - 거래 dimension·fact 결과: [`reports/transaction-fact-validation.md`](reports/transaction-fact-validation.md)
 - 카테고리·판매자 거래 mart 결과: [`reports/trade-marts-validation.md`](reports/trade-marts-validation.md)
+- 배송 지연·리뷰 mart 결과: [`reports/delivery-review-mart-validation.md`](reports/delivery-review-mart-validation.md)
 - 승인 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
 
 거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 사용자가 의미와 영향을 검토한 뒤
@@ -55,7 +56,14 @@ key와 충돌 방지 test로 보존합니다.
 구현했습니다. 가산 금액·주문상품 행 수는 delivered fact 전체와, 그룹별 연결 주문 수는
 월×주문×카테고리 또는 판매자 조합 수와 각각 대사했습니다. missing·unmapped 카테고리도
 제거하지 않았습니다. 전체 dbt build 231개 노드와 기존 Python 테스트 24개가
-통과했습니다. 배송·리뷰 mart와 post-mart pandas 산출물은 아직 구현하지 않았습니다.
+통과했습니다.
+
+배송 완료이면서 실제·예정 배송일을 비교할 수 있고 리뷰가 있는 주문을 1건당 1행으로
+만든 배송·리뷰 mart를 구현했습니다. 복수 리뷰를 주문별로 선집계해 주문을 동일 가중하고,
+달력 날짜 기준 지연 상태와 chronology flag를 보존했습니다. Delivered 96,478건에서 날짜
+비교 불가 8건과 리뷰가 없는 비교 가능 주문 646건을 대사해 최종 95,824건을 확인했습니다.
+전체 dbt build 265개 노드와 Python 테스트 24개가 통과했습니다. pandas 분석·차트와
+비개발자용 최종 결과물은 아직 구현하지 않았습니다.
 `shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼 표현하지
 않으며 dashboard는 선택 확장입니다.
 
