@@ -1,0 +1,141 @@
+version: 2
+
+models:
+  - name: mart_delivery_review_orders
+    description: >-
+      One row per delivered order with comparable actual and estimated delivery
+      dates and an order-level review summary. Calendar-date delivery timing and
+      all reviews within each order are retained without excluding chronology
+      flags.
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: is_late = (delivery_days_vs_estimate > 0)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (delivery_timing_status = 'early') =
+              (delivery_days_vs_estimate < 0)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (delivery_timing_status = 'promised_date') =
+              (delivery_days_vs_estimate = 0)
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (delivery_timing_status = 'late') =
+              (delivery_days_vs_estimate > 0)
+      - expression_is_true:
+          arguments:
+            expression: review_count >= 1
+      - expression_is_true:
+          arguments:
+            expression: >-
+              review_score_sum between review_count and review_count * 5
+      - expression_is_true:
+          arguments:
+            expression: >-
+              order_avg_review_score =
+              review_score_sum::numeric / review_count
+      - expression_is_true:
+          arguments:
+            expression: >-
+              min_review_score <= order_avg_review_score
+              and order_avg_review_score <= max_review_score
+      - expression_is_true:
+          arguments:
+            expression: >-
+              min_review_score >= 1 and max_review_score <= 5
+    columns:
+      - name: order_id
+        data_type: text
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('int_order_delivery_timing')
+                field: order_id
+          - relationships:
+              arguments:
+                to: ref('int_order_review_summary')
+                field: order_id
+      - name: order_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - delivered
+      - name: order_purchase_timestamp
+        data_type: timestamp without time zone
+        data_tests:
+          - not_null
+      - name: order_delivered_customer_date
+        data_type: timestamp without time zone
+        data_tests:
+          - not_null
+      - name: order_estimated_delivery_date
+        data_type: timestamp without time zone
+        data_tests:
+          - not_null
+      - name: delivery_days_vs_estimate
+        data_type: integer
+        data_tests:
+          - not_null
+      - name: delivery_timing_status
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - early
+                  - promised_date
+                  - late
+      - name: is_late
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: is_approval_date_missing
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: is_carrier_date_missing
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: is_approval_before_purchase
+        data_type: boolean
+      - name: is_carrier_before_purchase
+        data_type: boolean
+      - name: is_carrier_before_approval
+        data_type: boolean
+      - name: is_customer_before_purchase
+        data_type: boolean
+        data_tests:
+          - not_null
+      - name: is_customer_before_carrier
+        data_type: boolean
+      - name: review_count
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: review_score_sum
+        data_type: bigint
+        data_tests:
+          - not_null
+      - name: order_avg_review_score
+        data_type: numeric
+        data_tests:
+          - not_null
+      - name: min_review_score
+        data_type: integer
+        data_tests:
+          - not_null
+      - name: max_review_score
+        data_type: integer
+        data_tests:
+          - not_null
