@@ -21,6 +21,15 @@ olist_sellers_dataset.csv
 product_category_name_translation.csv
 ```
 
+## Requirements
+
+- Python 3.11 이상(검증 환경: 3.13.2)
+- Docker와 Docker Compose v2
+- Git
+
+`requirements.txt`의 pandas·matplotlib 버전은 Python 3.10에서 설치되지 않는다.
+가상환경을 만들기 전에 `python3 --version`으로 버전을 확인한다.
+
 ## Local preparation
 
 1. 위 Kaggle 원본 페이지에서 데이터를 내려받아 압축을 푼다.
@@ -31,9 +40,18 @@ product_category_name_translation.csv
 
 ```bash
 cp .env.example .env
+python3 --version
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
+
+set -a
+source .env
+set +a
 ```
+
+마지막 세 명령은 Bash/Zsh에서 `.env` 값을 현재 shell 환경변수로 내보낸다. Docker
+Compose와 Python script는 `.env`를 직접 읽지만 dbt의 `env_var()`는 shell 환경변수를
+사용하므로 dbt 실행 전에 이 단계가 필요하다. 새 terminal을 열었다면 다시 실행한다.
 
 기본 host port는 다른 로컬 PostgreSQL과의 충돌을 줄이기 위해 `55432`를 사용한다.
 필요하면 `.env`의 `PGPORT`만 다른 빈 포트로 바꾼다. loader는 이 프로젝트의 안전
@@ -42,12 +60,7 @@ python3 -m venv .venv
 4. 저장소 루트에서 source profile을 재검증한다.
 
 ```bash
-python3 scripts/profile_source.py build \
-  --data-dir data/raw \
-  --contract config/olist-source-contract.json \
-  --output-dir reports
-
-python3 scripts/profile_source.py check \
+.venv/bin/python scripts/profile_source.py check \
   --data-dir data/raw \
   --contract config/olist-source-contract.json \
   --output-dir reports
@@ -55,16 +68,21 @@ python3 scripts/profile_source.py check \
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-`build`는 실제 CSV를 검사하고 구조 프로파일과 값 프로파일을 포함한 집계 보고서를
-만든다. `check`는 같은 입력에서 다시 생성한 결과가 저장소의 보고서와 byte 단위로
-같은지 확인한다. Python 표준 라이브러리만 사용하므로 이 단계에는 별도 패키지 설치가
-필요하지 않다.
+`check`는 실제 CSV에서 구조·값 profile을 다시 만들고 저장소에 승인된 보고서와 byte
+단위로 같은지 확인한다. Clean clone 검증에서는 기존 기준을 덮어쓰지 않도록 반드시
+`check`를 먼저 실행한다. `build`는 source snapshot이나 계약을 의도적으로 변경하고
+검토받은 보고서를 교체할 때만 사용한다. Source profiler 자체는 Python 표준
+라이브러리만 사용하며, 이어지는 전체 저장소 test에는 앞에서 설치한 requirements가
+필요하다.
 
 기본 경로가 아닌 곳에 원천 파일이 있다면 `--data-dir`만 바꿔 실행할 수 있다.
 보고서에는 파일 checksum, 행 수, NULL·중복·미연결 행, 조인 증폭과 계약 지정
 열의 타입 변환·최소/최대, 공개 허용 도메인 분포, 날짜 비교와 주문 단위 금액
 대사 집계만 남는다. 미등록 도메인은 값 없이 행 수와 고유값 수만 기록하며,
 실제 ID, 위치값, 리뷰 문장, 알 수 없는 원문 값과 로컬 절대경로는 남기지 않는다.
+
+이 시점의 `unittest discover`는 합성 unit test를 확인하는 초기 검사다.
+`RUN_POSTGRES_TESTS=1`을 지정하지 않으므로 PostgreSQL integration test는 skip된다.
 
 5. PostgreSQL 15를 시작하고 raw snapshot을 적재·검산한다.
 
@@ -109,6 +127,24 @@ key, domain, 범위와 core relationship을 확인한다.
 이 구성은 현재 정적 로컬 snapshot을 위한 선택이다. staging build 통과가 모든 값의
 업무적 정확성이나 fact·mart 지표의 정확성을 보장하지는 않는다. 실행 결과와 범위는
 `reports/dbt-staging-validation.md`에서 확인한다.
+
+7. 전체 dbt graph, pandas 분석 산출물과 PostgreSQL integration test를 검증한다.
+
+```bash
+.venv/bin/dbt build --profiles-dir .
+
+.venv/bin/python scripts/analyze_delivery_reviews.py check
+
+RUN_POSTGRES_TESTS=1 PYTHONDONTWRITEBYTECODE=1 \
+  .venv/bin/python -m unittest discover -s tests -v
+```
+
+최종 기대 결과는 dbt 모델 20개와 data test 245개, 총 265개 node 통과 및 Python
+test 34개 통과다. pandas `check`의 PNG byte 비교는 같은 고정 Python·의존성·font
+rendering 환경에서의 재현을 확인한다. 다른 운영체제나 font library에서는 의미가
+같은 차트도 byte가 달라질 수 있다. Clean clone에서는 승인 산출물을 먼저 덮어쓰지
+않도록 `check`를 실행한다. `build`는 보고서·차트를 의도적으로 갱신하고 검토할 때만
+사용한다.
 
 작업을 멈출 때는 다음 명령을 사용한다. named volume은 유지되므로 다시 시작해도 적재한
 테이블이 남는다.
