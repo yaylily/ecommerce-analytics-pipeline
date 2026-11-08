@@ -6,7 +6,38 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**pandas 배송 지연·리뷰 분석·차트 구현 완료 · 결과 검토 단계**
+**핵심 범위 구현·검증 및 결과 검토 완료 · 공개 준비 완료**
+
+## 한눈에 보기
+
+- 문제: 주문·주문상품·결제·리뷰의 1:N 관계를 그대로 조인하면 행과 금액이
+  증폭될 수 있습니다.
+- 흐름: `Olist CSV 9개` → `Python profile·raw load` → `PostgreSQL` →
+  `dbt staging·intermediate·fact·mart` → `pandas 분석`
+- 모델·검증: dbt 모델 20개와 data test 245개, PostgreSQL 연동을 포함한 Python
+  test 34개가 통과했습니다.
+- 분석 결과: 최종 분석 대상 95,824건 중 지연 주문은 6.66%였고, 주문 동일가중 평균
+  리뷰 점수는 지연 2.27점, 비지연 4.29점으로 2.02점 낮게 관찰됐습니다.
+- 해석 경계: 이 차이는 final cohort 내부의 기술통계이며 인과 효과가 아닙니다.
+
+```text
+CSV source
+  → 구조·값 profile
+  → PostgreSQL raw (nullable text)
+  → dbt staging (typed contract)
+  → order-grain intermediate pre-aggregation
+  → item fact · category/seller marts · delivery/review mart
+  → pandas reconciliation · charts · result report
+```
+
+- [최종 배송 지연·리뷰 분석 결과](reports/delivery-review-analysis.md)
+- [모델·지표 계약](docs/model-metric-contracts.md)
+- [전체 재현 순서](#전체-재현-순서)
+
+<details>
+<summary>단계별 구현·검증 기록과 상세 보고서</summary>
+
+<br>
 
 Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 다중도,
 관계의 미연결 행과 fan-out을 집계하고 상품·결제 직접 조인의 금액 증폭을
@@ -30,9 +61,10 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 - 배송 지연·리뷰 pandas 분석 결과: [`reports/delivery-review-analysis.md`](reports/delivery-review-analysis.md)
 - 승인 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
 
-거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 사용자가 의미와 영향을 검토한 뒤
+거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 작성자가 의미와 영향을 검토한 뒤
 [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)와 D-007~D-009로
-승인했습니다. 승인은 구현 완료를 뜻하지 않습니다.
+승인하고 구현·검증했습니다. 승인 기록과 구현 상태는 각각 decision log와 이
+단계별 검증 보고서로 구분합니다.
 
 PostgreSQL 15의 `raw` schema에 원천 9개를 nullable `text`로 적재하고, 승인된 파일
 checksum과 총 1,550,922행을 전수 대사했습니다. 합성 PostgreSQL 통합 테스트에서 CSV
@@ -77,6 +109,8 @@ key와 충돌 방지 test로 보존합니다.
 `shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼 표현하지
 않으며 dashboard는 선택 확장입니다.
 
+</details>
+
 ## 해결하려는 문제
 
 Olist에서 주문 한 건에는 여러 주문상품·결제·리뷰가 연결될 수 있습니다. 이
@@ -92,7 +126,8 @@ Olist에서 주문 한 건에는 여러 주문상품·결제·리뷰가 연결�
 
 ## 핵심 질문
 
-1. 카테고리와 판매자별 주문·상품 거래 특성은 어떻게 다른가?
+1. 카테고리·판매자별 거래 특성을 반복 분석할 수 있도록 fan-out 없이 재사용 가능한
+   월별 mart를 어떻게 설계할 것인가?
 2. 약속한 배송일을 넘긴 주문과 리뷰 점수 사이에는 어떤 관계가 있는가?
 
 구체적인 지표 공식, 포함할 주문 상태, 기준 날짜와 review 처리 방식은 승인된
@@ -118,15 +153,58 @@ PostgreSQL과 dbt로 검산된 mart를 만든 뒤, 배송 지연·리뷰 질문 
 Olist Marketing Funnel 데이터 연결도 별도 질문의 필요가 확인될 때만 재평가하며,
 둘 다 core 완료 조건은 아닙니다.
 
-## 계획한 기술
+## 기술 구성
 
 - Core: SQL · PostgreSQL · dbt Core (`dbt-postgres`)
 - Analysis: Python · pandas · matplotlib
 - Support: Docker Compose · Git
-- Later: 선택적 작은 dashboard · fixture 기반 CI
+- Optional: 지원 직무에 필요할 때만 작은 dashboard · GitHub Actions CI
 
 Docker는 로컬 PostgreSQL을 재현하기 위한 보조 도구이며, 클라우드·실시간 처리와
 복잡한 오케스트레이션은 이 프로젝트의 목표가 아닙니다.
+
+## 전체 재현 순서
+
+요구 환경은 Python 3.11 이상(검증 환경 3.13.2), Docker와 Docker Compose v2입니다.
+Olist 원천 9개를 내려받아 `data/raw/`에 두는 방법과 각 단계의 상세 설명은
+[`data/README.md`](data/README.md)를 따릅니다.
+
+아래 명령은 Bash/Zsh 기준입니다.
+
+```bash
+cp .env.example .env
+python3 --version
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+
+set -a
+source .env
+set +a
+
+.venv/bin/python scripts/profile_source.py check \
+  --data-dir data/raw \
+  --contract config/olist-source-contract.json \
+  --output-dir reports
+
+docker compose up -d --wait
+.venv/bin/python scripts/load_raw.py load --data-dir data/raw
+.venv/bin/python scripts/load_raw.py check --data-dir data/raw
+
+.venv/bin/dbt debug --profiles-dir .
+.venv/bin/dbt build --profiles-dir .
+
+.venv/bin/python scripts/analyze_delivery_reviews.py check
+
+RUN_POSTGRES_TESTS=1 PYTHONDONTWRITEBYTECODE=1 \
+  .venv/bin/python -m unittest discover -s tests -v
+```
+
+최종 기대 결과는 dbt 20개 모델과 245개 data test, 총 265개 node 통과 및 Python
+test 34개 통과입니다. PNG byte 비교는 같은 고정 Python·의존성·font rendering
+환경에서의 재현을 확인합니다. Clean clone에서는 승인 산출물을 먼저 덮어쓰지 않도록
+`check`를 실행합니다. 의도적으로 보고서·차트를 갱신할 때만 검토 후 `build`를
+사용합니다. 작업을 마친 뒤 DB를 중지할 때는 named volume을 보존하는
+`docker compose down`을 사용합니다.
 
 ## 다루지 않는 것
 
@@ -152,7 +230,7 @@ Docker는 로컬 PostgreSQL을 재현하기 위한 보조 도구이며, 클라�
 ## 개발 방식
 
 생성형 AI는 구현 대안 탐색, 코드·테스트와 문서 초안 작성에 활용합니다. 분석
-질문, 모델의 한 행 의미, 지표와 조인 정책은 사용자가 결정하며, 채택한 변경은
+질문, 모델의 한 행 의미, 지표와 조인 정책은 작성자가 결정하며, 채택한 변경은
 데이터 테스트와 원천-최종 테이블 검산으로 확인합니다.
 
 - [Project charter](docs/project-charter.md)
