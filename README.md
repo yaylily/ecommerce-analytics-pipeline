@@ -6,7 +6,7 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**배송 지연·리뷰 주문 mart 구현·검증 완료 · 결과 검토 단계**
+**pandas 배송 지연·리뷰 분석·차트 구현 완료 · 결과 검토 단계**
 
 Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 다중도,
 관계의 미연결 행과 fan-out을 집계하고 상품·결제 직접 조인의 금액 증폭을
@@ -27,6 +27,7 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 - 거래 dimension·fact 결과: [`reports/transaction-fact-validation.md`](reports/transaction-fact-validation.md)
 - 카테고리·판매자 거래 mart 결과: [`reports/trade-marts-validation.md`](reports/trade-marts-validation.md)
 - 배송 지연·리뷰 mart 결과: [`reports/delivery-review-mart-validation.md`](reports/delivery-review-mart-validation.md)
+- 배송 지연·리뷰 pandas 분석 결과: [`reports/delivery-review-analysis.md`](reports/delivery-review-analysis.md)
 - 승인 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
 
 거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 사용자가 의미와 영향을 검토한 뒤
@@ -63,7 +64,16 @@ key와 충돌 방지 test로 보존합니다.
 달력 날짜 기준 지연 상태와 chronology flag를 보존했습니다. Delivered 96,478건에서 날짜
 비교 불가 8건과 리뷰가 없는 비교 가능 주문 646건을 대사해 최종 95,824건을 확인했습니다.
 전체 dbt build 265개 노드와 Python 테스트 24개가 통과했습니다. pandas 분석·차트와
-비개발자용 최종 결과물은 아직 구현하지 않았습니다.
+비개발자용 최종 결과물의 입력으로 사용했습니다.
+
+검증된 배송·리뷰 mart 한 개만 pandas로 읽어 SQL 기준 집계와 주문 수·리뷰 수·점수
+합계·그룹별 평균을 같은 read-only snapshot에서 대사했습니다. 최종 95,824건 중 지연은
+6.66%였고, 주문 동일가중 평균 리뷰 점수는 지연 2.27점과 비지연 4.29점으로 2.02점
+낮게 관찰됐습니다. 이 값은 인과 효과가 아닌 final cohort 내부의 기술통계입니다.
+재현 가능한 분석 스크립트 1개, 핵심 차트 2개와 비개발자용 결과 보고서 1개를
+생성하고 고정 snapshot 수치와 산출물 재현을 검사했습니다.
+전체 dbt build 265개 노드와 PostgreSQL 연동을 포함한 Python 테스트 34개가
+통과했습니다.
 `shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼 표현하지
 않으며 dashboard는 선택 확장입니다.
 
@@ -91,17 +101,22 @@ model/metric contract를 따릅니다. 관찰 데이터의 관계를 인과 효�
 ## 분석 전달 범위
 
 PostgreSQL과 dbt로 검산된 mart를 만든 뒤, 배송 지연·리뷰 질문 하나를 pandas로
-분석합니다. pandas는 dbt 변환을 다시 구현하지 않고 최종 mart의 탐색·집계·시각화에만
-사용합니다. core 결과물은 재현 가능한 분석 스크립트 1개, 핵심 차트 2개와
-비개발자가 이해할 수 있는 짧은 결과 보고서 1개로 제한합니다.
+분석했습니다. pandas는 dbt 변환을 다시 구현하지 않고 최종 mart의 검증·집계·시각화에만
+사용했습니다. core 결과물은 재현 가능한 분석 스크립트 1개, 핵심 차트 2개와
+비개발자가 이해할 수 있는 짧은 결과 보고서 1개로 제한했습니다.
 
-추가 통계 분석과 dashboard는 core 결과를 완성한 뒤 지원 직무에 필요할 때만 확장합니다.
+![분석 대상 내 배송 지연 비율](reports/figures/delivery-review-cohort-share.png)
+
+![배송 지연 여부별 주문 평균 리뷰 점수](reports/figures/delivery-review-average-score.png)
+
+추가 통계 분석과 dashboard는 core 범위에 포함하지 않았으며, 지원 직무에 실제로
+필요할 때만 선택적으로 확장합니다.
 
 ## 선택 확장
 
-작은 dashboard는 pandas 분석과 결과 보고서가 완성된 뒤 BI 지원에 필요할 때만
-추가합니다. Olist Marketing Funnel 데이터 연결도 핵심 모델과 분석 결과를 완료한 뒤
-재평가하며, 둘 다 core 완료 조건은 아닙니다.
+작은 dashboard는 완성된 core 뒤의 선택 확장이며 BI 지원에 필요할 때만 추가합니다.
+Olist Marketing Funnel 데이터 연결도 별도 질문의 필요가 확인될 때만 재평가하며,
+둘 다 core 완료 조건은 아닙니다.
 
 ## 계획한 기술
 
