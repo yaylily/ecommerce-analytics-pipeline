@@ -6,7 +6,7 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**핵심 범위 구현·검증 및 결과 검토 완료 · 공개 준비 완료**
+**핵심 범위 완료 · 선택 확장 카테고리·판매자 분석 완료**
 
 ## 한눈에 보기
 
@@ -15,10 +15,13 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 - 흐름: `Olist CSV 9개` → `Python profile·raw load` → `PostgreSQL` →
   `dbt staging·intermediate·fact·mart` → `pandas 분석`
 - 모델·검증: dbt 모델 20개와 data test 245개, PostgreSQL 연동을 포함한 Python
-  test 34개가 통과했습니다.
-- 분석 결과: 최종 분석 대상 95,824건 중 지연 주문은 6.66%였고, 주문 동일가중 평균
+  test 47개가 통과했습니다.
+- 거래 분석: 승인한 18개월에서 고정 Top 5 카테고리가 상품 거래액의 39.9%를
+  차지했고, 월별 판매자 Top 10 비중은 13.3%~26.6%로 관찰됐습니다.
+- 배송 분석: 최종 분석 대상 95,824건 중 지연 주문은 6.66%였고, 주문 동일가중 평균
   리뷰 점수는 지연 2.27점, 비지연 4.29점으로 2.02점 낮게 관찰됐습니다.
-- 해석 경계: 이 차이는 final cohort 내부의 기술통계이며 인과 효과가 아닙니다.
+- 해석 경계: 두 분석은 고정 snapshot 내부의 기술통계이며 원인이나 인과 효과를
+  증명하지 않습니다.
 
 ```text
 CSV source
@@ -30,7 +33,8 @@ CSV source
   → pandas reconciliation · charts · result report
 ```
 
-- [최종 배송 지연·리뷰 분석 결과](reports/delivery-review-analysis.md)
+- [카테고리·판매자 거래 분석 결과](reports/category-seller-analysis.md)
+- [배송 지연·리뷰 분석 결과](reports/delivery-review-analysis.md)
 - [모델·지표 계약](docs/model-metric-contracts.md)
 - [전체 재현 순서](#전체-재현-순서)
 
@@ -59,7 +63,10 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 - 카테고리·판매자 거래 mart 결과: [`reports/trade-marts-validation.md`](reports/trade-marts-validation.md)
 - 배송 지연·리뷰 mart 결과: [`reports/delivery-review-mart-validation.md`](reports/delivery-review-mart-validation.md)
 - 배송 지연·리뷰 pandas 분석 결과: [`reports/delivery-review-analysis.md`](reports/delivery-review-analysis.md)
-- 승인 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
+- 카테고리·판매자 분석 기간 감사: [`reports/category-seller-coverage-audit.md`](reports/category-seller-coverage-audit.md)
+- 카테고리·판매자 pandas 분석 결과: [`reports/category-seller-analysis.md`](reports/category-seller-analysis.md)
+- 모델·지표 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
+- 카테고리·판매자 분석 계약: [`docs/category-seller-analysis-contract.md`](docs/category-seller-analysis-contract.md)
 
 거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 작성자가 의미와 영향을 검토한 뒤
 [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)와 D-007~D-009로
@@ -106,6 +113,17 @@ key와 충돌 방지 test로 보존합니다.
 생성하고 고정 snapshot 수치와 산출물 재현을 검사했습니다.
 전체 dbt build 265개 노드와 PostgreSQL 연동을 포함한 Python 테스트 34개가
 통과했습니다.
+
+선택 확장으로 원천 coverage 경계를 감사해 2017년 2월~2018년 7월을 주 분석 기간으로
+승인하고, 검증된 category·seller mart를 pandas로 각각 읽어 월별 가산 지표를 다시
+대사했습니다. 두 mart를 직접 join하지 않고 고정 Top 5 카테고리 구성과 월별 판매자
+Top 1·Top 10·상위 10% 집중도를 계산했습니다. 고정 Top 5는 기간 상품 거래액의
+39.9%를 차지했고, 판매자 Top 10 월별 비중은 13.3%~26.6%였습니다. 누락·번역 미연결
+category를 `Other`와 mapping 상태 대사에 보존하고 판매자 식별자·위치 상세는 공개
+산출물에서 제외했습니다. 분석 스크립트 1개, 차트 3개와 결과 보고서 1개를 생성했고,
+SQL 기준 집계·합성 fixture·산출물 재현을 검사했습니다. 전체 dbt build 265개 노드와
+PostgreSQL 연동 Python 테스트 47개가 통과했으며 결과 의미와 공개 경계를
+검토했습니다.
 `shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼 표현하지
 않으며 dashboard는 선택 확장입니다.
 
@@ -135,30 +153,35 @@ model/metric contract를 따릅니다. 관찰 데이터의 관계를 인과 효�
 
 ## 분석 전달 범위
 
-PostgreSQL과 dbt로 검산된 mart를 만든 뒤, 배송 지연·리뷰 질문 하나를 pandas로
-분석했습니다. pandas는 dbt 변환을 다시 구현하지 않고 최종 mart의 검증·집계·시각화에만
-사용했습니다. core 결과물은 재현 가능한 분석 스크립트 1개, 핵심 차트 2개와
-비개발자가 이해할 수 있는 짧은 결과 보고서 1개로 제한했습니다.
+PostgreSQL과 dbt로 검산된 mart를 만든 뒤 pandas는 dbt 변환을 다시 구현하지 않고
+최종 mart의 검증·집계·시각화에만 사용했습니다. core에서는 배송 지연·리뷰 분석
+스크립트 1개, 차트 2개와 결과 보고서 1개를 만들었습니다.
 
-![분석 대상 내 배송 지연 비율](reports/figures/delivery-review-cohort-share.png)
+승인된 선택 확장에서는 category·seller mart의 coverage를 먼저 감사한 뒤 고정 Top 5
+카테고리 구성과 익명 판매자군 집중도를 분석했습니다. 별도 스크립트 1개, 차트 3개와
+결과 보고서 1개를 만들고 SQL 기준 집계와 pandas 결과를 대사했습니다.
+
+![고정 Top 5 카테고리와 Other의 월별 구성](reports/figures/category-seller-category-mix.png)
+
+![판매자 Top 1·Top 10·상위 10% 월별 집중도](reports/figures/category-seller-concentration.png)
 
 ![배송 지연 여부별 주문 평균 리뷰 점수](reports/figures/delivery-review-average-score.png)
 
-추가 통계 분석과 dashboard는 core 범위에 포함하지 않았으며, 지원 직무에 실제로
-필요할 때만 선택적으로 확장합니다.
+추가 통계 분석과 dashboard는 구현하지 않았으며, 추가 질문·지표와 검증 기준이
+별도로 승인될 때만 다음 작업 단위로 확장합니다.
 
 ## 선택 확장
 
-작은 dashboard는 완성된 core 뒤의 선택 확장이며 BI 지원에 필요할 때만 추가합니다.
-Olist Marketing Funnel 데이터 연결도 별도 질문의 필요가 확인될 때만 재평가하며,
-둘 다 core 완료 조건은 아닙니다.
+작은 dashboard는 완성된 core 뒤의 선택 확장이며, 승인된 분석 결과를 반복 탐색할
+필요가 확인될 때만 추가합니다. Olist Marketing Funnel 데이터 연결도 별도 질문의
+필요가 확인될 때만 재평가하며, 둘 다 core 완료 조건은 아닙니다.
 
 ## 기술 구성
 
 - Core: SQL · PostgreSQL · dbt Core (`dbt-postgres`)
 - Analysis: Python · pandas · matplotlib
 - Support: Docker Compose · Git
-- Optional: 지원 직무에 필요할 때만 작은 dashboard · GitHub Actions CI
+- Optional: 별도 범위 승인 후 작은 dashboard · GitHub Actions CI
 
 Docker는 로컬 PostgreSQL을 재현하기 위한 보조 도구이며, 클라우드·실시간 처리와
 복잡한 오케스트레이션은 이 프로젝트의 목표가 아닙니다.
@@ -191,16 +214,17 @@ docker compose up -d --wait
 .venv/bin/python scripts/load_raw.py check --data-dir data/raw
 
 .venv/bin/dbt debug --profiles-dir .
-.venv/bin/dbt build --profiles-dir .
+.venv/bin/dbt build --profiles-dir . --threads 1
 
 .venv/bin/python scripts/analyze_delivery_reviews.py check
+.venv/bin/python scripts/analyze_category_seller_trade.py check
 
 RUN_POSTGRES_TESTS=1 PYTHONDONTWRITEBYTECODE=1 \
   .venv/bin/python -m unittest discover -s tests -v
 ```
 
 최종 기대 결과는 dbt 20개 모델과 245개 data test, 총 265개 node 통과 및 Python
-test 34개 통과입니다. PNG byte 비교는 같은 고정 Python·의존성·font rendering
+test 47개 통과입니다. PNG byte 비교는 같은 고정 Python·의존성·font rendering
 환경에서의 재현을 확인합니다. Clean clone에서는 승인 산출물을 먼저 덮어쓰지 않도록
 `check`를 실행합니다. 의도적으로 보고서·차트를 갱신할 때만 검토 후 `build`를
 사용합니다. 작업을 마친 뒤 DB를 중지할 때는 named volume을 보존하는
