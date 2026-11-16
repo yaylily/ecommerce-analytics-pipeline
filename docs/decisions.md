@@ -225,3 +225,28 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 - Validation criterion: source collision test, mapping 3상태 fixture와 상품·fact
   reconciliation이 모두 통과한다.
 - Supersedes / Superseded by: 없음
+
+### D-012 — Serve approved aggregates through a bounded Streamlit dashboard
+
+- Status / Date: Accepted / 2026-11-16
+- Context: 승인된 거래 구성과 배송·리뷰 분석을 비개발자가 기간과 표시 그룹을
+  바꾸어 반복 확인할 전달 수단이 필요하다. 공개 app이 원본 데이터나 DB credential에
+  의존하거나, dashboard에서 기존 지표를 다시 정의해서는 안 된다.
+- Options considered:
+  1. PostgreSQL에 직접 연결하는 dashboard
+  2. 기존 Markdown·PNG 결과만 유지
+  3. 검증된 집계 파일을 읽는 작은 Streamlit dashboard
+- Decision: 세 번째 방식을 사용한다. 별도 exporter가 기존 분석 검산을
+  통과한 식별자 없는 집계를 만들고, Streamlit 단일 app의 거래 구성·배송 리뷰 두
+  탭은 그 파일만 읽는다. 상세 계약은
+  [`analysis-dashboard-contract.md`](analysis-dashboard-contract.md)를 따른다.
+- Why: Python·pandas 흐름 안에서 반복 탐색 기능을 추가하면서 runtime DB·secret,
+  별도 backend와 frontend 학습 범위를 만들지 않고, 화면 계산도 자동 테스트할 수
+  있기 때문이다.
+- Consequences and limitations: dashboard는 새 mart·지표·통계 결과를 만들지 않는다.
+  개별 판매자 drill-down과 행 단위 식별자는 제외한다. 구현 완료를 배포·운영 경험으로
+  표현하지 않으며 외부 배포는 로컬 결과 승인 뒤 별도로 결정한다.
+- Validation criterion: 집계 파일이 기존 분석 결과와 대사되고 build→check가
+  byte-identical하게 통과하며, 기간 재집계·빈 선택·0분모·손상된 입력과 기본 화면을
+  unit test와 Streamlit headless test로 검증한다.
+- Supersedes / Superseded by: 없음
