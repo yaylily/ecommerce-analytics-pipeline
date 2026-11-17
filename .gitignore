@@ -29,6 +29,16 @@ __pycache__/
 *.feather
 *.zip
 
+# Validated public dashboard aggregates: only the reviewed bundle is public.
+/dashboard/data/*
+!/dashboard/data/trade_monthly_overview.csv
+!/dashboard/data/category_mix.csv
+!/dashboard/data/seller_concentration.csv
+!/dashboard/data/delivery_timing_summary.csv
+!/dashboard/data/delivery_monthly.csv
+!/dashboard/data/delivery_sensitivity.csv
+!/dashboard/data/manifest.json
+
 # Database files and dumps
 *.dump
 *.backup

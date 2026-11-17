@@ -6,20 +6,22 @@ Olist 공개 이커머스 데이터를 이용해 주문·주문상품·결제·�
 
 ## 현재 상태
 
-**핵심 범위 완료 · 선택 확장 카테고리·판매자 분석 완료**
+**핵심 범위 완료 · 선택 확장 분석과 로컬 dashboard 구현 완료**
 
 ## 한눈에 보기
 
 - 문제: 주문·주문상품·결제·리뷰의 1:N 관계를 그대로 조인하면 행과 금액이
   증폭될 수 있습니다.
 - 흐름: `Olist CSV 9개` → `Python profile·raw load` → `PostgreSQL` →
-  `dbt staging·intermediate·fact·mart` → `pandas 분석`
+  `dbt staging·intermediate·fact·mart` → `pandas 분석` → `검증 집계·Streamlit`
 - 모델·검증: dbt 모델 20개와 data test 245개, PostgreSQL 연동을 포함한 Python
-  test 47개가 통과했습니다.
+  test 88개가 통과했습니다.
 - 거래 분석: 승인한 18개월에서 고정 Top 5 카테고리가 상품 거래액의 39.9%를
   차지했고, 월별 판매자 Top 10 비중은 13.3%~26.6%로 관찰됐습니다.
 - 배송 분석: 최종 분석 대상 95,824건 중 지연 주문은 6.66%였고, 주문 동일가중 평균
   리뷰 점수는 지연 2.27점, 비지연 4.29점으로 2.02점 낮게 관찰됐습니다.
+- 결과 전달: 식별자를 제거한 검증 집계 6개와 manifest만 읽는 Streamlit app에서
+  승인된 18개월의 거래 구성과 배송·리뷰 관계를 같은 정의로 다시 탐색할 수 있습니다.
 - 해석 경계: 두 분석은 고정 snapshot 내부의 기술통계이며 원인이나 인과 효과를
   증명하지 않습니다.
 
@@ -31,10 +33,12 @@ CSV source
   → order-grain intermediate pre-aggregation
   → item fact · category/seller marts · delivery/review mart
   → pandas reconciliation · charts · result report
+  → validated aggregate bundle · Streamlit dashboard
 ```
 
 - [카테고리·판매자 거래 분석 결과](reports/category-seller-analysis.md)
-- [배송 지연·리뷰 분석 결과](reports/delivery-review-analysis.md)
+- [배송·리뷰 심화 분석 결과](reports/delivery-review-deepening-analysis.md)
+- [Dashboard 구현·검증 결과](reports/dashboard-validation.md)
 - [모델·지표 계약](docs/model-metric-contracts.md)
 - [전체 재현 순서](#전체-재현-순서)
 
@@ -63,10 +67,13 @@ Olist 원천 CSV 9개에서 파일 checksum·행 수·헤더, NULL, 후보키 �
 - 카테고리·판매자 거래 mart 결과: [`reports/trade-marts-validation.md`](reports/trade-marts-validation.md)
 - 배송 지연·리뷰 mart 결과: [`reports/delivery-review-mart-validation.md`](reports/delivery-review-mart-validation.md)
 - 배송 지연·리뷰 pandas 분석 결과: [`reports/delivery-review-analysis.md`](reports/delivery-review-analysis.md)
+- 배송·리뷰 심화 분석 결과: [`reports/delivery-review-deepening-analysis.md`](reports/delivery-review-deepening-analysis.md)
 - 카테고리·판매자 분석 기간 감사: [`reports/category-seller-coverage-audit.md`](reports/category-seller-coverage-audit.md)
 - 카테고리·판매자 pandas 분석 결과: [`reports/category-seller-analysis.md`](reports/category-seller-analysis.md)
+- dashboard 구현·검증 결과: [`reports/dashboard-validation.md`](reports/dashboard-validation.md)
 - 모델·지표 계약: [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)
 - 카테고리·판매자 분석 계약: [`docs/category-seller-analysis-contract.md`](docs/category-seller-analysis-contract.md)
+- dashboard 계약: [`docs/analysis-dashboard-contract.md`](docs/analysis-dashboard-contract.md)
 
 거래 fact·mart, 배송·리뷰, 데이터 품질 정책은 작성자가 의미와 영향을 검토한 뒤
 [`docs/model-metric-contracts.md`](docs/model-metric-contracts.md)와 D-007~D-009로
@@ -95,15 +102,13 @@ key와 충돌 방지 test로 보존합니다.
 배송 완료 주문상품을 구매월×카테고리와 구매월×판매자 단위로 집계한 두 거래 mart를
 구현했습니다. 가산 금액·주문상품 행 수는 delivered fact 전체와, 그룹별 연결 주문 수는
 월×주문×카테고리 또는 판매자 조합 수와 각각 대사했습니다. missing·unmapped 카테고리도
-제거하지 않았습니다. 전체 dbt build 231개 노드와 기존 Python 테스트 24개가
-통과했습니다.
+제거하지 않았습니다.
 
 배송 완료이면서 실제·예정 배송일을 비교할 수 있고 리뷰가 있는 주문을 1건당 1행으로
 만든 배송·리뷰 mart를 구현했습니다. 복수 리뷰를 주문별로 선집계해 주문을 동일 가중하고,
 달력 날짜 기준 지연 상태와 chronology flag를 보존했습니다. Delivered 96,478건에서 날짜
 비교 불가 8건과 리뷰가 없는 비교 가능 주문 646건을 대사해 최종 95,824건을 확인했습니다.
-전체 dbt build 265개 노드와 Python 테스트 24개가 통과했습니다. pandas 분석·차트와
-비개발자용 최종 결과물의 입력으로 사용했습니다.
+pandas 분석·차트와 비개발자용 최종 결과물의 입력으로 사용했습니다.
 
 검증된 배송·리뷰 mart 한 개만 pandas로 읽어 SQL 기준 집계와 주문 수·리뷰 수·점수
 합계·그룹별 평균을 같은 read-only snapshot에서 대사했습니다. 최종 95,824건 중 지연은
@@ -111,8 +116,6 @@ key와 충돌 방지 test로 보존합니다.
 낮게 관찰됐습니다. 이 값은 인과 효과가 아닌 final cohort 내부의 기술통계입니다.
 재현 가능한 분석 스크립트 1개, 핵심 차트 2개와 비개발자용 결과 보고서 1개를
 생성하고 고정 snapshot 수치와 산출물 재현을 검사했습니다.
-전체 dbt build 265개 노드와 PostgreSQL 연동을 포함한 Python 테스트 34개가
-통과했습니다.
 
 선택 확장으로 원천 coverage 경계를 감사해 2017년 2월~2018년 7월을 주 분석 기간으로
 승인하고, 검증된 category·seller mart를 pandas로 각각 읽어 월별 가산 지표를 다시
@@ -121,11 +124,22 @@ Top 1·Top 10·상위 10% 집중도를 계산했습니다. 고정 Top 5는 기�
 39.9%를 차지했고, 판매자 Top 10 월별 비중은 13.3%~26.6%였습니다. 누락·번역 미연결
 category를 `Other`와 mapping 상태 대사에 보존하고 판매자 식별자·위치 상세는 공개
 산출물에서 제외했습니다. 분석 스크립트 1개, 차트 3개와 결과 보고서 1개를 생성했고,
-SQL 기준 집계·합성 fixture·산출물 재현을 검사했습니다. 전체 dbt build 265개 노드와
-PostgreSQL 연동 Python 테스트 47개가 통과했으며 결과 의미와 공개 경계를
+SQL 기준 집계·합성 fixture·산출물 재현을 검사하고 결과 의미와 공개 경계를
 검토했습니다.
-`shipping_limit_date`, 금액 tolerance 등 `[UNRESOLVED]` 정책도 해결된 것처럼 표현하지
-않으며 dashboard는 선택 확장입니다.
+
+배송 지연 주문을 예정일 대비 1~3일·4~7일·8~14일·15일 이상으로 나누고, 구매월별
+지연률과 지연·비지연 주문의 평균 리뷰 점수 차이가 특정 시점에만 나타나는지
+확인했습니다. 전체 95,824건과 시간 순서 역전 제외 94,458건을 함께 비교했지만,
+관찰 관계를 인과 효과로 확대하지 않았습니다.
+
+선택 확장 dashboard는 기존 두 분석의 검산을 다시 실행한 뒤 식별자가 없는 CSV 6개와
+manifest를 생성합니다. app은 DB·원천 CSV·credential에 연결하지 않고 이 고정 집계만
+읽으며, 시작·종료 월과 표시 그룹을 바꿔도 승인된 분모에서 KPI를 다시 계산합니다.
+checksum·schema·key·합계가 다르면 화면을 열지 않고, exporter build→check, 전체 dbt
+265개 node와 PostgreSQL 연동 Python 테스트 88개를 통과했습니다.
+
+`shipping_limit_date`의 이상치 처리와 금액 차이 허용 범위는 모델·지표 계약의
+`[UNRESOLVED]` 항목이며, 해당 값과 차이를 보존합니다.
 
 </details>
 
@@ -161,30 +175,41 @@ PostgreSQL과 dbt로 검산된 mart를 만든 뒤 pandas는 dbt 변환을 다시
 카테고리 구성과 익명 판매자군 집중도를 분석했습니다. 별도 스크립트 1개, 차트 3개와
 결과 보고서 1개를 만들고 SQL 기준 집계와 pandas 결과를 대사했습니다.
 
+검증된 집계만 읽는 Streamlit app은 거래 구성과 배송·리뷰 두 탭을 제공합니다. 거래
+기간, 고정 Top 5+Other와 익명 판매자 집중도 계열을 선택할 수 있고, 배송 구간 전체
+요약과 선택 기간의 지연률·리뷰 평균 차이를 함께 확인할 수 있습니다. 기간 KPI는 월별
+평균의 평균이 아니라 주문 수와 점수 합에서 다시 계산하며, 기존 분석에 없는 지표를
+새로 정의하지 않습니다.
+
 ![고정 Top 5 카테고리와 Other의 월별 구성](reports/figures/category-seller-category-mix.png)
 
 ![판매자 Top 1·Top 10·상위 10% 월별 집중도](reports/figures/category-seller-concentration.png)
 
 ![배송 지연 여부별 주문 평균 리뷰 점수](reports/figures/delivery-review-average-score.png)
 
-추가 통계 분석과 dashboard는 구현하지 않았으며, 추가 질문·지표와 검증 기준이
-별도로 승인될 때만 다음 작업 단위로 확장합니다.
-
-## 선택 확장
-
-작은 dashboard는 완성된 core 뒤의 선택 확장이며, 승인된 분석 결과를 반복 탐색할
-필요가 확인될 때만 추가합니다. Olist Marketing Funnel 데이터 연결도 별도 질문의
-필요가 확인될 때만 재평가하며, 둘 다 core 완료 조건은 아닙니다.
-
 ## 기술 구성
 
 - Core: SQL · PostgreSQL · dbt Core (`dbt-postgres`)
-- Analysis: Python · pandas · matplotlib
+- Analysis: Python · pandas · matplotlib · Streamlit
 - Support: Docker Compose · Git
-- Optional: 별도 범위 승인 후 작은 dashboard · GitHub Actions CI
 
 Docker는 로컬 PostgreSQL을 재현하기 위한 보조 도구이며, 클라우드·실시간 처리와
 복잡한 오케스트레이션은 이 프로젝트의 목표가 아닙니다.
+
+## 대시보드만 실행하기
+
+저장소에 포함된 검증 집계로 화면을 실행할 수 있습니다. Python 3.11 이상이 필요하며,
+아래 명령은 Bash/Zsh 기준으로 저장소 루트에서 실행합니다.
+원천 CSV·PostgreSQL·Docker·`.env`가 필요하지 않습니다.
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r dashboard/requirements.txt
+.venv/bin/streamlit run dashboard/app.py
+```
+
+브라우저에서 `http://localhost:8501`을 엽니다. 화면은 커밋된 집계 snapshot을 읽으며,
+원천부터 집계를 다시 만들고 검증하려면 아래 전체 재현 순서를 따릅니다.
 
 ## 전체 재현 순서
 
@@ -199,6 +224,7 @@ cp .env.example .env
 python3 --version
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip install -r dashboard/requirements.txt
 
 set -a
 source .env
@@ -218,16 +244,25 @@ docker compose up -d --wait
 
 .venv/bin/python scripts/analyze_delivery_reviews.py check
 .venv/bin/python scripts/analyze_category_seller_trade.py check
+.venv/bin/python scripts/analyze_delivery_review_deepening.py check
+.venv/bin/python scripts/export_dashboard_data.py check
 
 RUN_POSTGRES_TESTS=1 PYTHONDONTWRITEBYTECODE=1 \
   .venv/bin/python -m unittest discover -s tests -v
 ```
 
 최종 기대 결과는 dbt 20개 모델과 245개 data test, 총 265개 node 통과 및 Python
-test 47개 통과입니다. PNG byte 비교는 같은 고정 Python·의존성·font rendering
+test 88개 통과입니다. PNG byte 비교는 같은 고정 Python·의존성·font rendering
 환경에서의 재현을 확인합니다. Clean clone에서는 승인 산출물을 먼저 덮어쓰지 않도록
 `check`를 실행합니다. 의도적으로 보고서·차트를 갱신할 때만 검토 후 `build`를
-사용합니다. 작업을 마친 뒤 DB를 중지할 때는 named volume을 보존하는
+사용합니다. Dashboard는 별도 터미널에서 아래처럼 실행하며 runtime에는 DB나 `.env`가
+필요하지 않습니다.
+
+```bash
+.venv/bin/streamlit run dashboard/app.py
+```
+
+작업을 마친 뒤 DB를 중지할 때는 named volume을 보존하는
 `docker compose down`을 사용합니다.
 
 ## 다루지 않는 것

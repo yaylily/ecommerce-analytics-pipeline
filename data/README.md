@@ -43,6 +43,7 @@ cp .env.example .env
 python3 --version
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip install -r dashboard/requirements.txt
 
 set -a
 source .env
@@ -128,23 +129,16 @@ key, domain, 범위와 core relationship을 확인한다.
 업무적 정확성이나 fact·mart 지표의 정확성을 보장하지는 않는다. 실행 결과와 범위는
 `reports/dbt-staging-validation.md`에서 확인한다.
 
-7. 전체 dbt graph, pandas 분석 산출물과 PostgreSQL integration test를 검증한다.
+7. 전체 모델과 분석·dashboard 산출물을 검증한다.
 
-```bash
-.venv/bin/dbt build --profiles-dir .
+전체 dbt graph, 세 분석 스크립트, dashboard exporter와 PostgreSQL integration test의
+실행 명령·기대 결과는 [루트 README의 전체 재현 순서](../README.md#전체-재현-순서)를
+따른다. 최신 검증 절차는 해당 절에서 관리한다. 전체 dbt 검증은 로컬 shared-memory
+사용량을 제한하도록 `--threads 1`로 실행한다.
 
-.venv/bin/python scripts/analyze_delivery_reviews.py check
-
-RUN_POSTGRES_TESTS=1 PYTHONDONTWRITEBYTECODE=1 \
-  .venv/bin/python -m unittest discover -s tests -v
-```
-
-최종 기대 결과는 dbt 모델 20개와 data test 245개, 총 265개 node 통과 및 Python
-test 34개 통과다. pandas `check`의 PNG byte 비교는 같은 고정 Python·의존성·font
-rendering 환경에서의 재현을 확인한다. 다른 운영체제나 font library에서는 의미가
-같은 차트도 byte가 달라질 수 있다. Clean clone에서는 승인 산출물을 먼저 덮어쓰지
-않도록 `check`를 실행한다. `build`는 보고서·차트를 의도적으로 갱신하고 검토할 때만
-사용한다.
+Clean clone에서는 승인 산출물을 덮어쓰지 않는 `check`를 사용한다. PNG의 byte 비교는
+같은 Python·의존성·font rendering 환경을 전제로 하며, 다른 환경에서는 같은 차트도
+byte가 달라질 수 있다.
 
 작업을 멈출 때는 다음 명령을 사용한다. named volume은 유지되므로 다시 시작해도 적재한
 테이블이 남는다.
@@ -156,12 +150,6 @@ docker compose down
 `.env`의 DB명·사용자·password를 바꿔도 이미 만들어진 named volume의 초기 계정은
 자동으로 바뀌지 않는다. volume 삭제는 복구가 필요한 명시적 reset 작업이므로 기본
 절차에 포함하지 않는다.
-
-## Optional extension
-
-[Marketing Funnel by Olist](https://www.kaggle.com/datasets/olistbr/marketing-funnel-olist)는
-핵심 거래 모델이 완료된 뒤 별도 milestone에서 검토한다. 핵심 적재 대상에는
-포함하지 않는다.
 
 ## Repository policy
 

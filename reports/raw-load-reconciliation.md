@@ -50,8 +50,7 @@
   DB 각 행의 checksum이라는 뜻은 아니다.
 - 행 수 대사는 누락·중복 적재를 탐지하지만, 값의 업무적 타당성까지 보장하지 않는다.
   key·cast·domain·관계 검증은 승인된 계약에 따라 dbt staging에서 구현한다.
-- 이 구성은 로컬 재현 환경이며 production 운영, 실시간 처리나 cloud 배포를
-  증명하지 않는다.
+- 적재·검산은 로컬 PostgreSQL의 고정 CSV snapshot을 대상으로 수행했다.
 
 ## 재현 방법
 

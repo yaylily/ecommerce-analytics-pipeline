@@ -1,0 +1,3 @@
+# Keep checksum-protected public dashboard artifacts byte-stable on every OS.
+/dashboard/data/*.csv text eol=lf
+/dashboard/data/manifest.json text eol=lf
