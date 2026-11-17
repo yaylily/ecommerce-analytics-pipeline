@@ -34,16 +34,16 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 ### D-001 — Start from a clean repository
 
 - Status / Date: Accepted / 2026-10-07
-- Context: 기존 비공개 prototype에는 초기 적재 코드와 계획 문서가 섞여 있고,
-  공개용 프로젝트의 판단·검증 순서를 보여주기 어려웠다.
+- Context: 기존 prototype에는 초기 적재 코드와 계획 문서가 섞여 있어 재사용 전에
+  파일별 검증 여부와 데이터 계약을 확인해야 했다.
 - Options considered:
   1. 기존 Git 이력을 정리해 계속 사용
   2. 필요한 파일을 모두 복사해 새 이력 시작
   3. 빈 저장소에서 승인한 계약과 구현을 단계별로 다시 작성
 - Decision: 빈 `ecommerce-analytics-pipeline` 저장소에서 시작하고 기존 저장소는
   읽기 전용 참고 자료로만 사용한다.
-- Why: 검증되지 않은 파일과 오래된 주장을 가져오지 않고, 실제 판단과 검증이
-  생성되는 순서대로 안전한 Git 이력을 만들기 위해서다.
+- Why: 승인한 계약을 기준으로 각 구현과 검증 결과를 연결하고, 검증되지 않은
+  prototype 파일이 새 모델의 기준으로 사용되는 일을 방지하기 위해서다.
 - Consequences and limitations: 기존 `.git`, CSV, `.env`, loader와 문서를 통째로
   복사하지 않는다. 유효한 아이디어도 새 데이터 확인과 검토를 거쳐 재작성한다.
 - Validation criterion: 첫 커밋 전 tracked file과 remote를 확인하고 raw data·secret이
@@ -53,13 +53,12 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 ### D-002 — Use Olist commerce as the core dataset
 
 - Status / Date: Accepted / 2026-10-07
-- Context: 첫 공개 프로젝트는 일반적인 커머스 데이터에서 SQL·데이터 모델링과
-  품질 검증을 보여줘야 한다.
+- Context: 거래 특성과 배송·리뷰 관계를 분석하려면 주문·상품·결제·리뷰가
+  연결되는 관계형 데이터가 필요하다.
 - Options considered: Olist, TheLook, GA4 sample ecommerce, Instacart와 RetailRocket
 - Decision: Olist Brazilian E-Commerce 9개 파일을 핵심 데이터로 사용한다.
-  Olist Marketing Funnel은 핵심 모델 완료 후 선택 확장으로 둔다.
-- Why: 실제 익명 관계형 데이터에서 주문·상품·결제·리뷰의 서로 다른 한 행
-  의미와 1:N 중복 문제를 다룰 수 있고, 온라인 MD 경험과 연결할 수 있다.
+- Why: 익명화된 주문·상품·결제·리뷰가 관계형 구조로 제공되어 두 분석 질문을
+  다룰 수 있고, 서로 다른 grain과 1:N 관계의 중복 집계를 검증할 수 있다.
 - Consequences and limitations: 데이터는 2016–2018년 정적 표본이며 소비자 이벤트,
   광고비와 재고 snapshot이 없다. 현재 시장 성과나 원천에 없는 지표를 주장하지 않는다.
 - Validation criterion: source profile에서 파일·key·NULL·cardinality와 분석 가능 범위를
@@ -73,10 +72,10 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 - Options considered: PostgreSQL+dbt, BigQuery+dbt, DuckDB+dbt, Python 중심 ETL
 - Decision: PostgreSQL 15와 dbt Core(`dbt-postgres`)를 핵심으로 사용한다. Python은
   source profile과 적재에, Docker Compose는 로컬 DB 재현에만 사용한다.
-- Why: BigQuery 인증·비용과 새로운 클라우드 학습축을 추가하지 않고 관계형
-  모델링과 dbt 기본기를 집중적으로 증명할 수 있다.
-- Consequences and limitations: Docker·인프라 전문성이나 클라우드 운영 경험으로
-  표현하지 않는다. 대시보드와 CI 도구는 core model 검증 후 결정한다.
+- Why: 로컬 PostgreSQL에서 SQL 변환, 모델 의존성과 품질 테스트를 함께 실행하고,
+  별도 클라우드 계정 없이 같은 데이터로 분석 모델을 재현할 수 있다.
+- Consequences and limitations: Docker Compose는 로컬 PostgreSQL 재현에만 사용하며,
+  클라우드 실행 환경과 인프라 자동화는 이 결정의 범위에 포함하지 않는다.
 - Validation criterion: 실제 환경을 만든 뒤 clean setup과 dbt build의 재현성을 확인한다.
 - Supersedes / Superseded by: post-mart Python 사용 범위만 D-010으로 확장하며,
   PostgreSQL·dbt core 결정은 유지한다.
@@ -84,16 +83,16 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 ### D-004 — Record AI-assisted decisions through contracts and verification
 
 - Status / Date: Accepted / 2026-10-07
-- Context: AI를 많이 사용하더라도 데이터 의미와 최종 판단의 소유권이 흐려지지
-  않고, 다음 세션에서 결정이 유실되지 않아야 한다.
+- Context: AI가 제안한 구현을 검토할 때 데이터 의미와 승인된 기준을 확인하고,
+  코드가 변경되어도 결정 근거를 추적할 수 있어야 한다.
 - Options considered:
   1. 프롬프트와 대화 전문 저장
   2. 다수의 rules·hooks·skills와 상태 보드 운영
   3. 최소 작업 계약, 결정문, model/metric contracts와 검증 결과 유지
 - Decision: 세 번째 방식을 사용한다. AI는 선택지·코드·테스트·문서 초안을 만들고,
   사용자는 grain·지표·join·검산과 최종 채택을 결정한다.
-- Why: AI 사용량이 아니라 잘못된 결과를 발견·수정하고 설명할 수 있는지가
-  Analytics Engineering 역량을 더 잘 증명한다.
+- Why: 계약과 검산 결과를 구현에 연결하면 변경의 영향을 확인하고 오류를
+  재현·수정할 수 있다.
 - Consequences and limitations: 프롬프트 전문, AI 작성 비율과 세션 로그는 공개하지
   않는다. 결정 변경은 과거 기록을 지우지 않고 대체 관계로 남긴다.
 - Validation criterion: PR·커밋에서 계약, 구현, 실패→수정 테스트와 검산 결과의 연결을 확인한다.
@@ -102,13 +101,12 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 ### D-005 — Start with two business questions
 
 - Status / Date: Accepted / 2026-10-07
-- Context: 모든 원천과 지표를 한 번에 모델링하면 학습과 검증 범위가 커지고,
-  도구 나열 중심 프로젝트가 될 수 있다.
-- Options considered: 거래·배송·재구매 3개 질문 동시 진행, 핵심 2개 우선 진행
+- Context: 분석 질문을 먼저 정해야 필요한 모델, 지표와 검산 범위를 구체적으로
+  정의할 수 있다.
+- Options considered: 여러 분석 질문 동시 진행, 핵심 2개 우선 진행
 - Decision: 핵심 범위는 판매자·카테고리 거래 특성과 배송 지연·리뷰 관계에 집중한다.
-  재구매와 marketing funnel은 core model 이후 재평가한다.
-- Why: 온라인 MD 경험과 직접 연결되며 주문·상품·결제·리뷰 grain, fan-out과
-  관찰 데이터 해석을 함께 보여줄 수 있다.
+- Why: 거래 특성은 주문상품 단위, 배송·리뷰 관계는 주문 단위로 분석해야 한다.
+  두 질문에 맞춘 모델을 분리하면 상세를 보존하면서 1:N 조인의 중복을 방지할 수 있다.
 - Consequences and limitations: exact metric formula와 filter는 source profile 후
   별도 metric contract로 승인한다. 배송과 리뷰의 관계를 인과로 표현하지 않는다.
 - Validation criterion: 두 질문이 각각 최종 mart와 재현 SQL로 답해지고 원천까지 대사되는지 확인한다.
@@ -117,16 +115,16 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 ### D-006 — Use short-lived branches and pull requests
 
 - Status / Date: Accepted / 2026-10-10
-- Context: 개인 프로젝트에서도 AI-assisted 변경의 범위, 판단과 검증 흔적을
-  남기되 장기 브랜치 관리 부담은 피해야 한다.
+- Context: 변경 범위, 결정 근거와 검증 결과를 작업 단위별로 검토하고,
+  검증이 끝난 코드와 진행 중인 변경을 분리할 필요가 있다.
 - Options considered:
   1. 모든 변경을 `main`에 직접 커밋
   2. `main`과 장기 `dev`를 운영하는 GitFlow
   3. `main`과 짧은 작업 브랜치, PR을 사용하는 trunk-based workflow
 - Decision: 세 번째 방식을 사용한다. 초기 bootstrap 이후 모든 프로젝트 변경은
   최신 `main`에서 만든 작업 브랜치에서 진행하고 PR 검토 후 병합한다.
-- Why: `main`을 검증된 상태로 유지하면서도 작업 단위별 계약·diff·검증 결과와
-  사용자 판단을 공개 가능한 이력으로 남길 수 있다.
+- Why: `main`을 검증된 상태로 유지하면서 작업 단위별 계약·diff·검증 결과와
+  검토 기록을 함께 확인할 수 있다.
 - Consequences and limitations: 작은 변경에도 브랜치와 PR이 필요하다. 대신 장기
   `dev` 동기화와 다단계 병합은 관리하지 않는다.
 - Validation criterion: PR의 범위가 하나의 작업 단위인지, 최종 검증이 통과했는지,
@@ -191,21 +189,21 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
 ### D-010 — Use pandas only as the post-mart analysis layer
 
 - Status / Date: Accepted / 2026-10-16
-- Context: SQL·dbt 모델링뿐 아니라 Python 기반 탐색과 비개발자 대상 결과 설명을
-  증명해야 하지만, 같은 변환을 dbt와 pandas에 중복 구현하면 두 기준이 생기고 범위가
-  불필요하게 커진다.
+- Context: 검증된 mart에서 배송·리뷰 관계를 탐색하고 비개발자가 읽을 차트와
+  보고서를 생성할 분석 계층이 필요하다. 같은 변환을 dbt와 pandas에 중복 구현하면
+  지표 정의와 품질 기준이 달라질 수 있다.
 - Options considered: pandas를 사용하지 않음, dbt 변환을 pandas로 재구현,
   검증된 mart를 입력으로 제한된 분석만 수행
 - Decision: 세 번째 방식을 사용한다. core mart 완성 후 배송 지연·리뷰 질문 하나를
   pandas로 분석하고, 재현 가능한 스크립트 1개·핵심 차트 2개·짧은 비개발자용 결과
   보고서 1개를 만든다.
-- Why: SQL·dbt를 데이터 의미와 품질의 단일 기준으로 유지하면서 pandas 데이터 처리,
-  시각화와 비즈니스 해석 능력을 실제 결과물로 보여주기 위해서다.
+- Why: SQL·dbt를 데이터 의미와 품질의 단일 기준으로 유지하면서 pandas로
+  검산된 집계, 차트와 보고서를 재현 가능하게 생성할 수 있다.
 - Consequences and limitations: pandas는 mart의 grain·지표를 다시 정의하지 않는다.
-  추가 통계 분석, dashboard, Marketing Funnel과 새로운 데이터셋은 core 범위에 넣지 않는다.
+  분석 범위는 승인된 배송·리뷰 질문과 검산 기준으로 제한한다.
 - Validation criterion: pandas 입력 행·key와 핵심 집계가 mart와 대사되고, 같은 입력과
   명령에서 동일한 승인 지표를 사용하는 차트 2개와 보고서용 수치가 재현된다. 보고서는
-  가정·분모·제외 조건·한계와 비인과 경계를 설명하며, 사용자가 주요 집계를 설명할 수 있다.
+  가정·분모·제외 조건·해석 한계·비인과 경계와 주요 집계의 계산 근거를 설명한다.
 - Supersedes / Superseded by: 없음. D-003의 PostgreSQL·dbt core 결정은 유지한다.
 
 ### D-011 — Use a collision-guarded key for missing source category
@@ -224,4 +222,28 @@ README의 `현재 상태`에서만 관리하고, 실제 코드·테스트와 검
   노출할 표시명으로 사용하지 않는다. 다른 데이터셋에 그대로 일반화하지 않는다.
 - Validation criterion: source collision test, mapping 3상태 fixture와 상품·fact
   reconciliation이 모두 통과한다.
+- Supersedes / Superseded by: 없음
+
+### D-012 — Serve approved aggregates through a bounded Streamlit dashboard
+
+- Status / Date: Accepted / 2026-11-16
+- Context: 승인된 거래 구성과 배송·리뷰 분석을 비개발자가 기간과 표시 그룹을
+  바꾸어 반복 확인할 전달 수단이 필요하다. 공개 app이 원본 데이터나 DB credential에
+  의존하거나, dashboard에서 기존 지표를 다시 정의해서는 안 된다.
+- Options considered:
+  1. PostgreSQL에 직접 연결하는 dashboard
+  2. 기존 Markdown·PNG 결과만 유지
+  3. 검증된 집계 파일을 읽는 작은 Streamlit dashboard
+- Decision: 세 번째 방식을 사용한다. 별도 exporter가 기존 분석 검산을
+  통과한 식별자 없는 집계를 만들고, Streamlit 단일 app의 거래 구성·배송 리뷰 두
+  탭은 그 파일만 읽는다. 상세 계약은
+  [`analysis-dashboard-contract.md`](analysis-dashboard-contract.md)를 따른다.
+- Why: Python·pandas 흐름 안에서 반복 탐색 기능을 추가하면서 runtime DB·secret,
+  별도 backend와 frontend를 도입하지 않고, 화면 계산도 자동 테스트할 수
+  있기 때문이다.
+- Consequences and limitations: dashboard는 새 mart·지표·통계 결과를 만들지 않는다.
+  개별 판매자 drill-down과 행 단위 식별자는 제외한다.
+- Validation criterion: 집계 파일이 기존 분석 결과와 대사되고 build→check가
+  byte-identical하게 통과하며, 기간 재집계·빈 선택·0분모·손상된 입력과 기본 화면을
+  unit test와 Streamlit headless test로 검증한다.
 - Supersedes / Superseded by: 없음

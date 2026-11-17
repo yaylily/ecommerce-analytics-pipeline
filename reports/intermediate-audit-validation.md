@@ -163,8 +163,7 @@ Flag는 한 주문에서 겹칠 수 있으므로 위 역전 건수를 더해 이
 ## 자동 검증
 
 Intermediate 계층은 고정 snapshot에서 결과를 직접 검토하고 downstream test가 같은
-집계를 반복하지 않도록 PostgreSQL table로 materialize했다. 이 선택은 로컬 프로젝트의
-재현과 검토를 위한 것이며 production 성능 최적화 경험을 의미하지 않는다.
+집계를 반복하지 않도록 PostgreSQL table로 materialize했다.
 
 각 model에는 출력 열 이름·타입을 강제하는 model contract와 다음 검증을 연결했다.
 
@@ -206,12 +205,12 @@ dbt model contract가 이 열들에 참고 경고를 출력하지만, 현재 Pos
 성공 기준은 staging 9개와 intermediate 5개 model, data test 123개가 모두 통과하고
 ERROR·SKIP이 0인 것이다.
 
-## 해석 한계와 다음 결정
+## 검증 범위와 해석 한계
 
-이번 결과로 말할 수 있는 것은 주문 단위 선집계가 원천 count·금액·점수 합을 보존하고,
-전체 주문의 측별 존재 여부와 배송·chronology 상태를 삭제 없이 재현했다는 점이다.
+검증 결과, 주문 단위 선집계는 원천 count·금액·점수 합을 보존했고,
+전체 주문의 측별 존재 여부와 배송·chronology 상태를 삭제 없이 재현했다.
 
-다음은 아직 말할 수 없거나 결정하지 않았다.
+다음 항목은 이 단계의 검증 범위에 포함되지 않는다.
 
 - 금액 차이의 원인과 허용 tolerance
 - 0원 결제·0회 할부의 업무상 정상·오류 판정
@@ -221,5 +220,5 @@ ERROR·SKIP이 0인 것이다.
 - 배송 지연과 리뷰 점수의 관계 또는 인과 효과
 - category mapping, item fact와 최종 mart의 정확성
 
-이 보고서의 수치와 경계를 검토한 뒤 product/seller dimension과 item fact 구현으로
-진행한다.
+상품·판매자 dimension과 item fact의 검증은
+[거래 fact 검증 보고서](transaction-fact-validation.md)에 기록한다.

@@ -1015,8 +1015,11 @@ def _assert_exact_decimal(name: str, actual: Any, expected: Any) -> None:
 
 
 def _assert_derived_float(name: str, actual: Any, expected: Any) -> None:
-    if actual is None or expected is None:
-        if actual is expected:
+    # pandas represents SQL NULL medians as NaN in a numeric baseline column.
+    actual_missing = pd.isna(actual)
+    expected_missing = pd.isna(expected)
+    if actual_missing or expected_missing:
+        if actual_missing and expected_missing:
             return
         raise DeliveryReviewDeepeningError(
             f"pandas and SQL derived values differ for {name}"

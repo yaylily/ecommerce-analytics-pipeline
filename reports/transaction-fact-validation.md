@@ -182,7 +182,7 @@ dbt adapter는 precision·scale을 지정하지 않은 PostgreSQL `numeric` 열�
 unbounded `numeric`과 관련된 메시지다. 위 `WARN=0`은 dbt 실행 노드의 최종 상태이며,
 해당 adapter 로그 문구가 없었다는 뜻은 아니다.
 
-## 7. 사용자 검토 항목
+## 7. 카테고리 key 결정 근거
 
 ### `[승인 완료]` missing category의 내부 key 표현
 
@@ -207,8 +207,7 @@ unbounded `numeric`과 관련된 메시지다. 위 `WARN=0`은 dbt 실행 노드
 - 상품 카테고리 상태는 데이터 보존을 위한 분류이며 정상·오류 판정이 아니다.
 - 판매자 위치는 원천 city/state만 보존하며 geolocation 분석을 구현하지 않았다.
 - `shipping_limit_date` 이상치의 의미나 상한을 정하지 않았다.
-- 성능 튜닝, 증분 적재, production 배포나 운영 경험을 검증한 단계가 아니다.
-- category·seller별 거래 특성은 후속 mart가 완성되기 전에는 결론 내리지 않는다.
+- category·seller별 거래 특성의 집계·해석은 이 dimension·fact 검증 범위에 포함하지 않는다.
 
 ## 9. 재현 방법
 

@@ -262,6 +262,39 @@ class DeliveryReviewDeepeningUnitTests(unittest.TestCase):
         with self.assertRaises(analysis.DeliveryReviewDeepeningError):
             analysis.reconcile_with_database(self.summary, month_key_drift)
 
+    def test_sql_reconciliation_accepts_empty_severity_group_nulls(self) -> None:
+        summary = analysis.summarize_deepening(
+            analysis.validate_analysis_frame(
+                synthetic_frame(days=(-1, 0, 1), true_inversion_index=None)
+            )
+        )
+        baselines = baselines_from_summary(summary)
+        empty_median = baselines.severity.set_index("severity_group").loc[
+            "late_4_7", "median_review_score"
+        ]
+        # A SQL NULL becomes NaN alongside non-empty float medians in pandas.
+        self.assertTrue(pd.isna(empty_median))
+        self.assertIsNone(summary.severity_group("late_4_7").median_review_score)
+        analysis.reconcile_with_database(summary, baselines)
+
+    def test_derived_metric_nulls_do_not_hide_observed_value_mismatches(self) -> None:
+        for actual, expected in ((None, float("nan")), (float("nan"), None)):
+            with self.subTest(actual=actual, expected=expected):
+                analysis._assert_derived_float("empty_median", actual, expected)
+
+        for actual, expected in (
+            (None, 2.0),
+            (float("nan"), 2.0),
+            (2.0, None),
+            (2.0, float("nan")),
+            (None, 0.0),
+            (0.0, float("nan")),
+            (1.0, 2.0),
+        ):
+            with self.subTest(actual=actual, expected=expected):
+                with self.assertRaises(analysis.DeliveryReviewDeepeningError):
+                    analysis._assert_derived_float("median", actual, expected)
+
     def test_artifacts_are_deterministic_and_check_is_read_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             reports_dir = Path(temporary_directory) / "reports"
