@@ -21,7 +21,6 @@
 
 - AI-assisted work:
 - Decisions and checks performed by the author:
-- What the author can explain or change without AI:
 
 ## Open items
 

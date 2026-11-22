@@ -1,0 +1,73 @@
+{
+  "files": {
+    "category_mix.csv": {
+      "byte_count": 9876,
+      "key_max": [
+        "2018-07",
+        "relogios_presentes"
+      ],
+      "key_min": [
+        "2017-02",
+        "__other__"
+      ],
+      "row_count": 108,
+      "sha256": "66871c1afca44d2ed4bc850d4a97e8c608a602598584684747fa3fcf4267af67"
+    },
+    "delivery_monthly.csv": {
+      "byte_count": 3025,
+      "key_max": [
+        "2018-07"
+      ],
+      "key_min": [
+        "2017-02"
+      ],
+      "row_count": 18,
+      "sha256": "8ae287dfc00e746fa8572056a1c775097607bd936aaddf8946e2f9218b969be2"
+    },
+    "delivery_sensitivity.csv": {
+      "byte_count": 519,
+      "key_max": [
+        "without_chronology_inversions"
+      ],
+      "key_min": [
+        "all_orders"
+      ],
+      "row_count": 2,
+      "sha256": "7dc45a2d8ea9af085ba68ea0fb57d6340b30c130bce28ed21f0b7f7688009de4"
+    },
+    "delivery_timing_summary.csv": {
+      "byte_count": 998,
+      "key_max": [
+        "promised_date"
+      ],
+      "key_min": [
+        "early"
+      ],
+      "row_count": 6,
+      "sha256": "d56436adc191079b9dfb3464804491dabab54165c214b0c32801e10549a78340"
+    },
+    "seller_concentration.csv": {
+      "byte_count": 2966,
+      "key_max": [
+        "2018-07"
+      ],
+      "key_min": [
+        "2017-02"
+      ],
+      "row_count": 18,
+      "sha256": "757bb4cf85287dba639a755608bc66db044094d989ef0ebcfea3899f70854ef6"
+    },
+    "trade_monthly_overview.csv": {
+      "byte_count": 943,
+      "key_max": [
+        "2018-07"
+      ],
+      "key_min": [
+        "2017-02"
+      ],
+      "row_count": 18,
+      "sha256": "4072eb24f4765700d4cb0b02b755c02649fe4aef976d4d302936c42307a5489a"
+    }
+  },
+  "schema_version": 1
+}
